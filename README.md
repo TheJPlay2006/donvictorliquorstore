@@ -1,18 +1,18 @@
 <div align="center">
+<img src="public/img/logo.png" alt="Licores Don Víctor" width="120" /><br/>
 
-<img src="public/img/logo.png" alt="Licores Don Víctor" width="140" />
+# Licores Don Víctor
 
-# 🥃 Licores Don Víctor
+<img src="https://readme-typing-svg.demolab.com/?font=Georgia&weight=500&size=17&pause=1500&color=F7941D&center=true&vCenter=true&width=560&lines=Catálogo+de+cervezas%2C+vinos+y+licores;La+Fortuna%2C+San+Carlos+%E2%80%94+Costa+Rica;Pedidos+directo+por+WhatsApp%2C+sin+carrito" alt="tagline" />
 
-### Catálogo web de licores en La Fortuna, Costa Rica
+<br/>
 
-<img src="https://readme-typing-svg.demolab.com/?font=Poppins&size=18&pause=1000&color=C8A24C&center=true&vCenter=true&width=520&lines=Cervezas+%7C+Vinos+%7C+Licores+%7C+Cocteler%C3%ADa;Cat%C3%A1logo+online%2C+pedidos+directo+por+WhatsApp;Sin+carrito%2C+sin+fricci%C3%B3n%2C+sin+vueltas" alt="Typing SVG" />
-
-[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](#)
-[![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)](#)
-[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](#)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](#)
-[![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](#)
+<img src="https://img.shields.io/badge/HTML5-1E120E?style=flat-square&logo=html5&logoColor=F7941D" alt="HTML5" />
+<img src="https://img.shields.io/badge/CSS3-1E120E?style=flat-square&logo=css3&logoColor=F7941D" alt="CSS3" />
+<img src="https://img.shields.io/badge/JavaScript-1E120E?style=flat-square&logo=javascript&logoColor=F7941D" alt="JavaScript" />
+<img src="https://img.shields.io/badge/Supabase-1E120E?style=flat-square&logo=supabase&logoColor=F7941D" alt="Supabase" />
+<img src="https://img.shields.io/badge/Vercel-1E120E?style=flat-square&logo=vercel&logoColor=F7941D" alt="Vercel" />
+<img src="https://img.shields.io/badge/WhatsApp-1E120E?style=flat-square&logo=whatsapp&logoColor=25D366" alt="WhatsApp" />
 
 </div>
 
