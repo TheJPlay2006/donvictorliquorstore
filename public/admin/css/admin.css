@@ -1,0 +1,651 @@
+/* ==========================
+   PANEL ADMIN — estilos propios, reutilizando los tokens de estilos.css
+========================== */
+
+.admin-body {
+    min-height: 100vh;
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* ==========================
+   LOGIN
+========================== */
+
+.admin-login-pantalla {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.admin-login-tarjeta {
+    width: min(380px, 100%);
+    padding: 32px 28px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+    text-align: center;
+}
+
+.admin-login-logo {
+    width: 120px;
+    margin: 0 auto 18px;
+    display: block;
+}
+
+.admin-login-tarjeta h1 {
+    font-size: var(--fs-h3);
+    margin-bottom: 6px;
+}
+
+.admin-login-subtitulo {
+    color: var(--color-text-light);
+    font-size: var(--fs-body-sm);
+    margin-bottom: 22px;
+}
+
+.admin-login-tarjeta .consulta-form {
+    text-align: left;
+}
+
+.admin-login-error {
+    color: #ff8a80 !important;
+    min-height: 18px;
+}
+
+.admin-login-volver {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    color: var(--color-text-light);
+    font-size: var(--fs-small);
+    text-decoration: none;
+}
+
+.admin-login-volver:hover {
+    color: var(--color-primary);
+}
+
+/* ==========================
+   TOPBAR
+========================== */
+
+.admin-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 12px 24px;
+    background: var(--color-navbar);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.admin-topbar-marca {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: var(--fs-body);
+}
+
+.admin-topbar-marca img {
+    height: 30px;
+}
+
+.admin-topbar-nav {
+    display: flex;
+    gap: 18px;
+}
+
+.admin-topbar-nav a {
+    color: var(--color-text-light);
+    text-decoration: none;
+    font-size: var(--fs-small);
+    font-weight: 500;
+    transition: color .2s ease;
+}
+
+.admin-topbar-nav a:hover,
+.admin-topbar-nav a.active {
+    color: var(--color-primary);
+}
+
+.admin-topbar-usuario {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: var(--fs-small);
+    color: var(--color-text-light);
+}
+
+.admin-topbar-ver-sitio {
+    color: var(--color-text-light);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-topbar-ver-sitio:hover {
+    color: var(--color-primary);
+}
+
+/* ==========================
+   BOTONES
+========================== */
+
+.admin-boton-primario,
+.admin-boton-secundario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 9px 18px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: var(--fs-small);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color .2s ease, transform .2s ease, border-color .2s ease;
+}
+
+.admin-boton-primario {
+    background: var(--color-primary);
+    color: #1b0f08;
+}
+
+.admin-boton-primario:hover {
+    background: var(--color-primary-hover);
+    transform: translateY(-1px);
+}
+
+.admin-boton-secundario {
+    background: transparent;
+    border-color: var(--color-border);
+    color: var(--color-text-light);
+}
+
+.admin-boton-secundario:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.admin-boton-cargando {
+    opacity: .7;
+    cursor: wait;
+}
+
+/* ==========================
+   CONTENIDO
+========================== */
+
+.admin-contenido {
+    width: min(1100px, calc(100% - 48px));
+    margin: 0 auto;
+    padding: 32px 0 60px;
+}
+
+.admin-contenido-angosto {
+    width: min(640px, calc(100% - 48px));
+}
+
+.admin-migas {
+    color: var(--color-text-light);
+    font-size: var(--fs-small);
+    margin-bottom: 18px;
+}
+
+.admin-migas a {
+    color: var(--color-text-light);
+    text-decoration: none;
+}
+
+.admin-migas a:hover {
+    color: var(--color-primary);
+}
+
+/* ==========================
+   LANDING
+========================== */
+
+.admin-bienvenida h1 {
+    font-size: var(--fs-h2);
+    margin-bottom: 6px;
+}
+
+.admin-bienvenida p {
+    color: var(--color-text-light);
+    font-size: var(--fs-body);
+    margin-bottom: 28px;
+}
+
+.admin-tarjetas-acceso {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+.admin-tarjeta-acceso {
+    display: block;
+    padding: 24px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--color-text);
+    transition: transform .2s ease, border-color .2s ease;
+}
+
+.admin-tarjeta-acceso:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+}
+
+.admin-tarjeta-acceso i {
+    font-size: var(--fs-h2);
+    color: var(--color-primary);
+    margin-bottom: 10px;
+}
+
+.admin-tarjeta-acceso h2 {
+    font-size: var(--fs-h4);
+    margin-bottom: 6px;
+}
+
+.admin-tarjeta-acceso p {
+    color: var(--color-text-light);
+    font-size: var(--fs-small);
+    margin: 0;
+}
+
+/* ==========================
+   LISTAS
+========================== */
+
+.admin-encabezado-lista {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.admin-encabezado-lista h1 {
+    font-size: var(--fs-h2);
+}
+
+.admin-controles-lista {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.admin-controles-lista input[type="search"] {
+    flex: 1 1 260px;
+    height: 40px;
+    padding: 0 14px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--fs-body-sm);
+    outline: 0;
+}
+
+.admin-controles-lista input[type="search"]:focus {
+    border-color: var(--color-primary);
+}
+
+.admin-controles-lista select {
+    height: 40px;
+    padding: 0 14px;
+    background-color: var(--color-card);
+    color-scheme: dark;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    color: var(--color-text-light);
+    font: inherit;
+    font-size: var(--fs-body-sm);
+    outline: 0;
+    cursor: pointer;
+}
+
+.admin-controles-lista select:focus {
+    border-color: var(--color-primary);
+}
+
+.admin-cantidad-resultados {
+    color: var(--color-text-light);
+    font-size: var(--fs-small);
+    margin-bottom: 14px;
+}
+
+.admin-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.admin-fila {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr) 90px 90px auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.admin-fila-miniatura {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--color-bg);
+}
+
+.admin-fila-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.admin-fila-info strong {
+    font-size: var(--fs-body-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-fila-info span {
+    color: var(--color-text-light);
+    font-size: var(--fs-tiny);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-fila-precio {
+    color: var(--color-primary);
+    font-weight: 700;
+    font-size: var(--fs-body-sm);
+}
+
+.admin-fila-stock {
+    color: var(--color-text-light);
+    font-size: var(--fs-tiny);
+}
+
+.admin-fila-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-badge-toggle {
+    padding: 5px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-light);
+    font-size: var(--fs-badge);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.admin-badge-toggle.activo {
+    background: rgba(247, 148, 29, .16);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.admin-badge-toggle.admin-badge-estado.activo {
+    background: rgba(37, 211, 102, .16);
+    border-color: var(--color-success);
+    color: var(--color-success);
+}
+
+.admin-badge-toggle.admin-badge-estado:not(.activo) {
+    background: rgba(239, 108, 102, .12);
+    border-color: #ef6c66;
+    color: #ef6c66;
+}
+
+.admin-mensaje-error,
+.admin-mensaje-vacio {
+    padding: 24px;
+    text-align: center;
+    color: var(--color-text-light);
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.admin-mensaje-error {
+    color: #ff8a80;
+}
+
+/* ==========================
+   FORMULARIOS
+========================== */
+
+.admin-form select {
+    width: 100%;
+    height: 38px;
+    margin: 0 0 9px;
+    padding: 0 12px;
+    background-color: #2b1a16;
+    color-scheme: dark;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--fs-body-sm);
+    outline: 0;
+    cursor: pointer;
+}
+
+.admin-form select:focus {
+    border-color: var(--color-primary);
+}
+
+.admin-ayuda {
+    color: var(--color-text-light);
+    font-size: var(--fs-tiny);
+    margin: 0 0 12px;
+}
+
+.admin-form-fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.admin-form-seccion {
+    padding-top: 18px;
+    margin: 0 0 14px;
+    color: var(--color-primary);
+    font-size: var(--fs-small);
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    border-top: 1px solid var(--color-border);
+}
+
+.admin-form-seccion:first-child {
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* Imagen: input nativo oculto, botón + preview + nombre de archivo propios */
+
+.admin-campo-imagen {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 6px;
+}
+
+.admin-campo-imagen-preview {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+}
+
+.admin-campo-imagen-controles {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-input-file-oculto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.admin-input-file-oculto:focus-visible + label {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.admin-archivo-nombre {
+    color: var(--color-text-light);
+    font-size: var(--fs-tiny);
+}
+
+.admin-form-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px 28px;
+    margin: 4px 0 16px;
+}
+
+.admin-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-text-light);
+    font-size: var(--fs-body-sm);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Checkbox estilizado como toggle-switch (mismo lenguaje visual que los
+   badges togglables de las listas), en vez del checkbox nativo cuadrado. */
+.admin-check input[type="checkbox"] {
+    appearance: none;
+    width: 38px;
+    height: 22px;
+    flex: 0 0 38px;
+    position: relative;
+    background: var(--color-border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color .2s ease;
+}
+
+.admin-check input[type="checkbox"]::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-text);
+    transition: transform .2s ease;
+}
+
+.admin-check input[type="checkbox"]:checked {
+    background: var(--color-primary);
+}
+
+.admin-check input[type="checkbox"]:checked::before {
+    transform: translateX(16px);
+    background: #1b0f08;
+}
+
+.admin-check input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.admin-form-acciones {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 18px;
+    border-top: 1px solid var(--color-border);
+}
+
+.admin-panel-inline {
+    padding: 24px 26px;
+    margin-bottom: 24px;
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+}
+
+.admin-panel-titulo {
+    font-size: var(--fs-h4);
+    margin-bottom: 14px;
+}
+
+/* ==========================
+   RESPONSIVE
+========================== */
+
+@media (max-width: 767.98px) {
+    .admin-topbar {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .admin-fila {
+        grid-template-columns: 48px 1fr;
+        grid-template-areas:
+            "miniatura info"
+            "precio precio"
+            "badges badges"
+            "acciones acciones";
+        row-gap: 8px;
+    }
+
+    .admin-fila-miniatura { grid-area: miniatura; width: 48px; height: 48px; }
+    .admin-fila-info { grid-area: info; }
+    .admin-fila-precio { grid-area: precio; }
+    .admin-fila-stock { display: none; }
+    .admin-fila-badges { grid-area: badges; }
+    .admin-fila > a,
+    .admin-fila > button.admin-editar-categoria { grid-area: acciones; justify-self: start; }
+
+    .admin-form-fila {
+        grid-template-columns: 1fr;
+    }
+}

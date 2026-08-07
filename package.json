@@ -1,0 +1,27 @@
+{
+  "name": "donvictorliquorstore",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "npx serve public -l 3000",
+    "dev:vercel": "vercel dev",
+    "supabase:start": "supabase start",
+    "supabase:reset": "supabase db reset",
+    "supabase:stop": "supabase stop"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheJPlay2006/donvictorliquorstore.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/TheJPlay2006/donvictorliquorstore/issues"
+  },
+  "homepage": "https://github.com/TheJPlay2006/donvictorliquorstore#readme",
+  "devDependencies": {
+    "supabase": "^2.110.0"
+  }
+}
