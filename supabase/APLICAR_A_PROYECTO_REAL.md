@@ -7,7 +7,7 @@ local) al proyecto real: `https://supabase.com/dashboard/project/babglruyhltjncv
 2. Pegá **todo** el bloque de abajo en una consulta nueva y dale **Run**. Es
    idempotente (`on conflict ... do nothing`), así que si algo falla a mitad
    de camino podés corregir y volver a correrlo entero sin duplicar datos.
-3. Avisale a Claude cuando termine para verificar contra la API real.
+3. Avisale al equipo cuando termine para verificar contra la API real.
 
 ```sql
 -- ============================================================
