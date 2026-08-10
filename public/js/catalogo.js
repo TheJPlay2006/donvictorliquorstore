@@ -4,13 +4,21 @@ let categoriasCatalogo = [];
 let textoBusqueda = "";
 let categoriaSeleccionada = "todas";
 let disponibilidadSeleccionada = "todas";
+let productosFiltrados = [];
+let cantidadVisible = obtenerCantidadInicial();
 
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosCatalogo();
     configurarControlesCatalogo();
+    configurarPanelFiltrosMovil();
+    configurarCargaProgresiva();
     configurarBotonesDetalleCatalogo();
 });
+
+function obtenerCantidadInicial() {
+    return window.matchMedia("(max-width: 575.98px)").matches ? 6 : 12;
+}
 
 
 async function cargarDatosCatalogo() {
@@ -177,6 +185,7 @@ function mostrarProductos(productos) {
         );
 
     contenedor.innerHTML = "";
+    productosFiltrados = productos;
 
     if (productos.length === 0) {
 
@@ -187,11 +196,12 @@ function mostrarProductos(productos) {
         `;
 
         mostrarCantidadProductos(0);
+        actualizarBotonCargaProgresiva();
 
         return;
     }
 
-    productos.forEach((producto) => {
+    productos.slice(0, cantidadVisible).forEach((producto) => {
 
         const tarjeta =
             crearTarjetaProducto(producto);
@@ -204,6 +214,22 @@ function mostrarProductos(productos) {
         productos.length
     );
 
+    actualizarBotonCargaProgresiva();
+
+}
+
+function actualizarBotonCargaProgresiva() {
+    const boton = document.getElementById("cargarMasProductos");
+
+    if (!boton) {
+        return;
+    }
+
+    const restantes = Math.max(productosFiltrados.length - cantidadVisible, 0);
+    boton.classList.toggle("visible", restantes > 0);
+    boton.innerHTML = restantes > 0
+        ? `Cargar más <span>(${restantes})</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>`
+        : "";
 }
 
 
@@ -459,6 +485,7 @@ function configurarControlesCatalogo() {
             categoriaSeleccionada =
                 boton.dataset.categoria;
 
+            actualizarResumenFiltros();
             buscarProductos();
 
         }
@@ -489,6 +516,7 @@ function configurarControlesCatalogo() {
                     disponibilidadSeleccionada =
                         boton.dataset.disponibilidad;
 
+                    actualizarResumenFiltros();
                     buscarProductos();
 
                 }
@@ -602,6 +630,8 @@ function buscarProductos() {
             }
         );
 
+    cantidadVisible = obtenerCantidadInicial();
+
     ordenarProductos(
         document.getElementById(
             "ordenarProductos"
@@ -609,6 +639,81 @@ function buscarProductos() {
         productosEncontrados
     );
 
+}
+
+function configurarCargaProgresiva() {
+    const boton = document.getElementById("cargarMasProductos");
+
+    boton?.addEventListener("click", () => {
+        cantidadVisible += obtenerCantidadInicial();
+        mostrarProductos(productosFiltrados);
+    });
+}
+
+function configurarPanelFiltrosMovil() {
+    const botonAbrir = document.getElementById("abrirFiltros");
+    const botonCerrar = document.getElementById("cerrarFiltros");
+    const botonAplicar = document.getElementById("aplicarFiltros");
+    const fondo = document.getElementById("fondoFiltros");
+    const panel = document.getElementById("filtrosCatalogo");
+
+    if (!botonAbrir || !panel) {
+        return;
+    }
+
+    const actualizarPanelInerte = (inactivo) => {
+        panel.toggleAttribute("inert", inactivo);
+    };
+
+    actualizarPanelInerte(window.innerWidth < 992);
+
+    const cerrar = () => {
+        document.body.classList.remove("filtros-abiertos");
+        botonAbrir.setAttribute("aria-expanded", "false");
+        actualizarPanelInerte(window.innerWidth < 992);
+    };
+
+    const abrir = () => {
+        actualizarPanelInerte(false);
+        document.body.classList.add("filtros-abiertos");
+        botonAbrir.setAttribute("aria-expanded", "true");
+        botonCerrar?.focus();
+    };
+
+    botonAbrir.addEventListener("click", abrir);
+    botonCerrar?.addEventListener("click", cerrar);
+    botonAplicar?.addEventListener("click", cerrar);
+    fondo?.addEventListener("click", cerrar);
+
+    document.addEventListener("keydown", (evento) => {
+        if (evento.key === "Escape") {
+            cerrar();
+        }
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth >= 992) {
+            cerrar();
+            actualizarPanelInerte(false);
+        } else if (!document.body.classList.contains("filtros-abiertos")) {
+            actualizarPanelInerte(true);
+        }
+    });
+
+    actualizarResumenFiltros();
+}
+
+function actualizarResumenFiltros() {
+    const resumen = document.getElementById("resumenFiltros");
+
+    if (!resumen) {
+        return;
+    }
+
+    const cantidad = Number(categoriaSeleccionada !== "todas") +
+        Number(disponibilidadSeleccionada !== "todas");
+
+    resumen.textContent = String(cantidad);
 }
 
 

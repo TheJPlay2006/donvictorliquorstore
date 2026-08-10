@@ -4,11 +4,73 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     marcarPaginaActiva();
     mostrarAnioActual();
+    inicializarMenuMovil();
     inicializarFormularioContacto();
     animarEntradaDeSecciones();
     animarElementosGranulares();
     inicializarAcordeones();
 });
+
+function inicializarMenuMovil() {
+    const botonAbrir = document.querySelector(".menu-toggle");
+    const botonCerrar = document.querySelector(".menu-cerrar");
+    const fondo = document.querySelector(".menu-fondo");
+    const menu = document.getElementById("menuPrincipal");
+
+    if (!botonAbrir || !menu) {
+        return;
+    }
+
+    const actualizarMenuInerte = (inactivo) => {
+        menu.toggleAttribute("inert", inactivo);
+    };
+
+    actualizarMenuInerte(window.innerWidth < 992);
+
+    const cerrarMenu = () => {
+        document.body.classList.remove("menu-abierto");
+        botonAbrir.setAttribute("aria-expanded", "false");
+        actualizarMenuInerte(window.innerWidth < 992);
+    };
+
+    const abrirMenu = () => {
+        actualizarMenuInerte(false);
+        document.body.classList.add("menu-abierto");
+        botonAbrir.setAttribute("aria-expanded", "true");
+        botonCerrar?.focus();
+    };
+
+    botonAbrir.addEventListener("click", () => {
+        if (document.body.classList.contains("menu-abierto")) {
+            cerrarMenu();
+        } else {
+            abrirMenu();
+        }
+    });
+
+    botonCerrar?.addEventListener("click", cerrarMenu);
+    fondo?.addEventListener("click", cerrarMenu);
+    menu.addEventListener("click", (evento) => {
+        if (evento.target.closest("a")) {
+            cerrarMenu();
+        }
+    });
+
+    document.addEventListener("keydown", (evento) => {
+        if (evento.key === "Escape") {
+            cerrarMenu();
+        }
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth >= 992) {
+            cerrarMenu();
+            actualizarMenuInerte(false);
+        } else if (!document.body.classList.contains("menu-abierto")) {
+            actualizarMenuInerte(true);
+        }
+    });
+}
 
 function animarEntradaDeSecciones() {
     const secciones = document.querySelectorAll("#mainContent > section");

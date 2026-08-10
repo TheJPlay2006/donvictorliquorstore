@@ -17,6 +17,7 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/visual-refresh.css">
 </head>
 
 <body>
@@ -64,10 +65,27 @@
 
                 </div>
 
+                <div class="catalogo-herramientas-movil">
+                    <button type="button" class="abrir-filtros" id="abrirFiltros" aria-controls="filtrosCatalogo"
+                        aria-expanded="false">
+                        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                        <span>Filtros</span>
+                        <span class="resumen-filtros" id="resumenFiltros">0</span>
+                        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+
                 <div class="catalogo-layout">
 
                     <!-- Filtros -->
-                    <aside class="filtros-catalogo">
+                    <aside class="filtros-catalogo" id="filtrosCatalogo">
+
+                        <div class="filtros-cabecera">
+                            <span>Filtros</span>
+                            <button type="button" class="cerrar-filtros" id="cerrarFiltros" aria-label="Cerrar filtros">
+                                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                            </button>
+                        </div>
 
                         <h2>Filtros</h2>
 
@@ -112,6 +130,11 @@
                             </div>
 
                         </div>
+
+                        <button type="button" class="aplicar-filtros" id="aplicarFiltros">
+                            Ver productos
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </button>
 
                     </aside>
 
@@ -168,9 +191,17 @@
                             </p>
                         </div>
 
+                        <button type="button" class="catalogo-cargar-mas" id="cargarMasProductos">
+                            Cargar más productos
+                            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+
                     </section>
 
                 </div>
+
+                <button type="button" class="filtros-fondo" id="fondoFiltros" tabindex="-1"
+                    aria-label="Cerrar filtros"></button>
 
             </div>
 

@@ -29,7 +29,7 @@ async function cargarCategorias() {
             throw error;
         }
 
-        mostrarCategorias(data);
+        mostrarCategorias((data || []).slice(0, 4));
     } catch (error) {
         console.error('Error al cargar las categorías:', error);
 
@@ -115,7 +115,7 @@ async function cargarProductosDestacados() {
             .eq('disponible', true)
             .eq('destacado', true)
             .order('fecha_creacion', { ascending: false })
-            .limit(8);
+            .limit(4);
 
         if (error) {
             throw error;
