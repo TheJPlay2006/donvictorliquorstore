@@ -224,6 +224,42 @@ function mostrarAnioActual() {
     }
 }
 
+/* ==========================
+   CONSULTA DE PRODUCTOS POR WHATSAPP
+   Compartido por catalogo.js, categorias.js, inicio.js y modal-producto.js
+   (componentes.js se carga antes que todos ellos en cada página).
+========================== */
+
+// Siempre apunta a catalogo.html: es la única página que carga el catálogo
+// completo, así que el deep link funciona sin importar desde qué página
+// (inicio, categorías) se generó el mensaje.
+function crearEnlaceProducto(idProducto) {
+    return new URL(
+        `catalogo.html?producto=${idProducto}`,
+        window.location.href
+    ).href;
+}
+
+function crearMensajeConsultaWhatsApp(producto) {
+    const lineas = [
+        `Hola, deseo consultar por el producto ${producto.nombre}.`
+    ];
+
+    if (producto.codigo) {
+        lineas.push(`Código: ${producto.codigo}`);
+    }
+
+    lineas.push(`Enlace: ${crearEnlaceProducto(producto.id_producto)}`);
+
+    return lineas.join("\n");
+}
+
+function crearEnlaceWhatsAppConsulta(producto) {
+    return `https://wa.me/50672497807?text=${encodeURIComponent(
+        crearMensajeConsultaWhatsApp(producto)
+    )}`;
+}
+
 function inicializarFormularioContacto() {
     const formularios = document.querySelectorAll("[data-whatsapp-form]");
 

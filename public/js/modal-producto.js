@@ -15,10 +15,8 @@ function mostrarModalProductoCatalogo(producto) {
     const precio =
         formatearPrecio(producto.precio);
 
-    const mensajeWhatsApp =
-        encodeURIComponent(
-            `Hola, deseo consultar por el producto ${producto.nombre}.`
-        );
+    const enlaceWhatsApp =
+        crearEnlaceWhatsAppConsulta(producto);
 
     modalContenido.innerHTML = `
         <div class="modal-header">
@@ -88,7 +86,7 @@ function mostrarModalProductoCatalogo(producto) {
                     <div class="modal-producto-acciones">
 
                         <a
-                            href="https://wa.me/50672497807?text=${mensajeWhatsApp}"
+                            href="${enlaceWhatsApp}"
                             target="_blank"
                             rel="noopener noreferrer"
                             class="modal-producto-whatsapp"

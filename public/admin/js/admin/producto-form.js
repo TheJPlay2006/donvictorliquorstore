@@ -54,6 +54,7 @@ async function cargarProductoParaEditar(id) {
     const formulario = document.getElementById("formularioProducto");
     formulario.elements.nombre.value = producto.nombre || "";
     formulario.elements.marca.value = producto.marca || "";
+    formulario.elements.codigo.value = producto.codigo || "";
     formulario.elements.presentacion.value = producto.presentacion || "";
     formulario.elements.descripcion.value = producto.descripcion || "";
     formulario.elements.precio.value = producto.precio;
@@ -130,6 +131,7 @@ async function guardarProducto(evento) {
         const datosProducto = {
             nombre: formulario.elements.nombre.value.trim(),
             marca: formulario.elements.marca.value.trim() || null,
+            codigo: formulario.elements.codigo.value.trim() || null,
             presentacion: formulario.elements.presentacion.value.trim() || null,
             descripcion: formulario.elements.descripcion.value.trim() || null,
             precio: Number(formulario.elements.precio.value),

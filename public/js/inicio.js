@@ -108,7 +108,7 @@ async function cargarProductosDestacados() {
             .from('productos')
             .select(`
                 id_producto, nombre, marca, descripcion, presentacion, precio, stock,
-                imagen, destacado, promocion, disponible, estado, id_categoria,
+                imagen, destacado, promocion, disponible, estado, id_categoria, codigo,
                 categorias ( nombre )
             `)
             .eq('estado', true)
@@ -227,7 +227,7 @@ function mostrarProductosDestacados(productos) {
                             </button>
 
                             <a
-                                href="${crearEnlaceWhatsapp(producto)}"
+                                href="${crearEnlaceWhatsAppConsulta(producto)}"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="btn-producto-whatsapp"
@@ -340,16 +340,4 @@ function formatearPrecio(precio) {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     }).format(valor)}`;
-}
-
-function crearEnlaceWhatsapp(producto) {
-    const nombre = producto.nombre || 'el producto';
-    const precio = formatearPrecio(producto.precio);
-
-    const mensaje = `
-Hola, me interesa el producto ${nombre}.
-Precio: ${precio}.
-    `.trim();
-
-    return `https://wa.me/50672497807?text=${encodeURIComponent(mensaje)}`;
 }
