@@ -545,6 +545,27 @@
     margin: 4px 0 16px;
 }
 
+.admin-estado-linea {
+    align-items: center;
+}
+
+.admin-estado-disponibilidad {
+    min-width: 220px;
+}
+
+.admin-estado-disponibilidad label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.admin-estado-disponibilidad select {
+    margin-bottom: 0;
+}
+
+.admin-estado-linea .admin-check {
+    margin-top: 22px;
+}
+
 .admin-check {
     display: inline-flex;
     align-items: center;

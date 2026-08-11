@@ -104,8 +104,9 @@
 
             <h2 class="admin-form-seccion">Estado</h2>
 
-            <div class="admin-form-checks">
-                <div>
+            <div class="admin-form-checks admin-estado-linea">
+
+                <div class="admin-estado-disponibilidad">
                     <label for="campoDisponibilidad">Disponibilidad</label>
 
                     <select id="campoDisponibilidad" name="disponibilidad">
@@ -114,10 +115,22 @@
                         <option value="consultar">Consultar</option>
                     </select>
                 </div>
-                
-                <label class="admin-check"><input type="checkbox" name="destacado"><span>Destacado</span></label>
-                <label class="admin-check"><input type="checkbox" name="promocion"><span>Promoción</span></label>
-                <label class="admin-check"><input type="checkbox" name="estado" checked><span>Activo</span></label>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="destacado">
+                    <span>Destacado</span>
+                </label>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="promocion">
+                    <span>Promoción</span>
+                </label>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="estado" checked>
+                    <span>Activo</span>
+                </label>
+
             </div>
 
             <div class="admin-form-acciones">

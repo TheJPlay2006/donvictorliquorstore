@@ -148,6 +148,7 @@ async function guardarProducto(evento) {
                     : Number(formulario.elements.stock.value),
 
             disponible:formulario.elements.disponibilidad.value === "disponible",
+
             destacado: formulario.elements.destacado.checked,
             promocion: formulario.elements.promocion.checked,
             estado: formulario.elements.estado.checked
