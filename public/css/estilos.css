@@ -2906,8 +2906,9 @@ body {
         width: 100%;
         min-height: 48px;
     }
+}
 
-    /* ==========================
+/* ==========================
    NOSOTROS Y CONTACTO — BASE COMPARTIDA
 ========================== */
 
@@ -3579,6 +3580,7 @@ body {
     color: #071b0e;
     font-size: 21px;
 }
+
 
     /*footer*/
     .footer {
