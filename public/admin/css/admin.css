@@ -549,6 +549,11 @@
     align-items: center;
 }
 
+.admin-estado-linea .admin-check {
+    padding-left: 24px;
+    border-left: 1px solid var(--color-border);
+}
+
 .admin-estado-disponibilidad {
     min-width: 220px;
 }
