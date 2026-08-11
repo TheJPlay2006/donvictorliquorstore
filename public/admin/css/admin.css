@@ -193,7 +193,7 @@
 }
 
 .admin-contenido-angosto {
-    width: min(640px, calc(100% - 48px));
+    width: min(860px, calc(100% - 48px));
 }
 
 .admin-migas {
