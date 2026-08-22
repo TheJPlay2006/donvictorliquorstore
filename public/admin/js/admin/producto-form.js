@@ -1,6 +1,7 @@
 let productoIdEdicion = null;
 let imagenActualUrl = null;
 let archivoImagenSeleccionado = null;
+let previewBlobUrl = null;
 
 document.addEventListener("admin-listo", async () => {
     const parametros = new URLSearchParams(window.location.search);
@@ -72,33 +73,223 @@ async function cargarProductoParaEditar(id) {
     formulario.elements.estado.checked = !!producto.estado;
 
     imagenActualUrl = producto.imagen || null;
-    mostrarPreviewImagen(imagenActualUrl);
+    actualizarVisualizacionImagen();
 }
 
-function mostrarPreviewImagen(url) {
-    const img = document.getElementById("previewImagen");
-    const texto = document.getElementById("imagenActualTexto");
-
-    if (url) {
-        img.src = url.startsWith("blob:") ? url : window.resolverRutaImagenAdmin(url);
-        img.hidden = false;
-        texto.textContent = "Imagen actual";
-    } else {
-        img.hidden = true;
-        texto.textContent = "Sin imagen todavía.";
+function mostrarErrorImagen(mensaje) {
+    const feedback = document.getElementById("dropzoneFeedbackError");
+    if (feedback) {
+        feedback.textContent = `✕ ${mensaje}`;
+        feedback.style.display = "block";
     }
 }
 
-function configurarFormularioProducto() {
-    document.getElementById("campoImagenArchivo").addEventListener("change", (evento) => {
-        const archivo = evento.target.files[0] || null;
-        archivoImagenSeleccionado = archivo;
+function ocultarErrorImagen() {
+    const feedback = document.getElementById("dropzoneFeedbackError");
+    if (feedback) {
+        feedback.textContent = "";
+        feedback.style.display = "none";
+    }
+}
 
-        if (archivo) {
-            mostrarPreviewImagen(URL.createObjectURL(archivo));
-            document.getElementById("imagenActualTexto").textContent = archivo.name;
+function validarImagenLocal(archivo) {
+    const tiposPermitidos = ["image/jpeg", "image/png", "image/webp"];
+    const tamanioMaximo = 8 * 1024 * 1024; // 8 MB
+
+    if (!archivo) {
+        return "No se seleccionó ningún archivo.";
+    }
+    if (!tiposPermitidos.includes(archivo.type)) {
+        return "El archivo debe ser JPEG, PNG o WebP.";
+    }
+    if (archivo.size > tamanioMaximo) {
+        return "La imagen no puede superar los 8 MB.";
+    }
+    return null;
+}
+
+function actualizarVisualizacionImagen() {
+    const vacioDiv = document.getElementById("dropzoneContenidoVacio");
+    const previewDiv = document.getElementById("dropzoneContenidoPreview");
+    const previewImg = document.getElementById("previewImagen");
+    const nombreTexto = document.getElementById("imagenNombreTexto");
+    const btnQuitar = document.getElementById("btnQuitarImagen");
+
+    ocultarErrorImagen();
+
+    if (archivoImagenSeleccionado) {
+        vacioDiv.hidden = true;
+        previewDiv.hidden = false;
+
+        if (previewBlobUrl) {
+            URL.revokeObjectURL(previewBlobUrl);
+        }
+        previewBlobUrl = URL.createObjectURL(archivoImagenSeleccionado);
+        previewImg.src = previewBlobUrl;
+        nombreTexto.textContent = `✓ Imagen seleccionada: ${archivoImagenSeleccionado.name}`;
+
+        btnQuitar.textContent = imagenActualUrl ? "Cancelar cambio" : "Quitar selección";
+        btnQuitar.hidden = false;
+    } else if (imagenActualUrl) {
+        vacioDiv.hidden = true;
+        previewDiv.hidden = false;
+
+        previewImg.src = imagenActualUrl.startsWith("blob:") ? imagenActualUrl : window.resolverRutaImagenAdmin(imagenActualUrl);
+        nombreTexto.textContent = "Imagen actual";
+        btnQuitar.hidden = true;
+    } else {
+        vacioDiv.hidden = false;
+        previewDiv.hidden = true;
+        previewImg.src = "";
+        nombreTexto.textContent = "";
+        btnQuitar.hidden = true;
+    }
+}
+
+function handleImageFile(file) {
+    const errorMsg = validarImagenLocal(file);
+    if (errorMsg) {
+        archivoImagenSeleccionado = null;
+        document.getElementById("campoImagenArchivo").value = "";
+        actualizarVisualizacionImagen();
+        mostrarErrorImagen(errorMsg);
+        return;
+    }
+
+    archivoImagenSeleccionado = file;
+
+    const input = document.getElementById("campoImagenArchivo");
+    if (input.files[0] !== file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+    }
+
+    actualizarVisualizacionImagen();
+}
+
+function quitarSeleccionImagen() {
+    archivoImagenSeleccionado = null;
+    document.getElementById("campoImagenArchivo").value = "";
+    if (previewBlobUrl) {
+        URL.revokeObjectURL(previewBlobUrl);
+        previewBlobUrl = null;
+    }
+    actualizarVisualizacionImagen();
+}
+
+function configurarFormularioProducto() {
+    const dropzone = document.getElementById("dropzoneImagen");
+    const input = document.getElementById("campoImagenArchivo");
+    const btnQuitar = document.getElementById("btnQuitarImagen");
+
+    // Click en la dropzone para abrir selector de archivos
+    dropzone.addEventListener("click", (evento) => {
+        // Ignorar clics en botones de acción del preview
+        if (evento.target.closest(".admin-preview-botones")) {
+            return;
+        }
+        if (evento.target === input) {
+            return;
+        }
+        input.click();
+    });
+
+    // Accesibilidad por teclado
+    dropzone.addEventListener("keydown", (evento) => {
+        if (evento.key === "Enter" || evento.key === " ") {
+            evento.preventDefault();
+            input.click();
         }
     });
+
+    // Evitar parpadeo del estado dragover con un contador
+    let dragCounter = 0;
+
+    dropzone.addEventListener("dragenter", (evento) => {
+        evento.preventDefault();
+        dragCounter++;
+        if (dragCounter === 1) {
+            dropzone.classList.add("admin-dropzone-activa");
+        }
+    });
+
+    dropzone.addEventListener("dragover", (evento) => {
+        evento.preventDefault();
+    });
+
+    dropzone.addEventListener("dragleave", (evento) => {
+        evento.preventDefault();
+        dragCounter--;
+        if (dragCounter === 0) {
+            dropzone.classList.remove("admin-dropzone-activa");
+        }
+    });
+
+    dropzone.addEventListener("drop", (evento) => {
+        evento.preventDefault();
+        dragCounter = 0;
+        dropzone.classList.remove("admin-dropzone-activa");
+
+        const archivos = evento.dataTransfer.files;
+        if (archivos && archivos.length > 0) {
+            if (archivos.length > 1) {
+                mostrarErrorImagen("Solo podés seleccionar una imagen por producto.");
+                return;
+            }
+            handleImageFile(archivos[0]);
+        }
+    });
+
+    // Evento de cambio en el input de archivo
+    input.addEventListener("change", (evento) => {
+        const archivo = evento.target.files[0] || null;
+        if (archivo) {
+            handleImageFile(archivo);
+        }
+    });
+
+    // Acción de quitar / cancelar cambio de imagen
+    if (btnQuitar) {
+        btnQuitar.addEventListener("click", (evento) => {
+            evento.stopPropagation();
+            quitarSeleccionImagen();
+        });
+    }
+
+    // Pegar imagen desde el portapapeles (Ctrl+V)
+    document.addEventListener("paste", (evento) => {
+        const activeEl = document.activeElement;
+        // No interferir con entradas de texto normales (ej: pegar nombre o descripción)
+        if (activeEl && (activeEl.tagName === "INPUT" && activeEl.type !== "file" || activeEl.tagName === "TEXTAREA")) {
+            const items = evento.clipboardData && evento.clipboardData.items;
+            if (items) {
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.startsWith("image/")) {
+                        const file = items[i].getAsFile();
+                        if (file) {
+                            evento.preventDefault();
+                            handleImageFile(file);
+                            break;
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        const archivos = evento.clipboardData && evento.clipboardData.files;
+        if (archivos && archivos.length > 0) {
+            const primerArchivo = archivos[0];
+            if (primerArchivo.type.startsWith("image/")) {
+                evento.preventDefault();
+                handleImageFile(primerArchivo);
+            }
+        }
+    });
+
+    // Inicializar visualización del estado actual de la imagen (vacío o cargado al editar)
+    actualizarVisualizacionImagen();
 
     document.getElementById("formularioProducto").addEventListener("submit", guardarProducto);
 }

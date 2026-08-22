@@ -86,21 +86,37 @@
 
             <h2 class="admin-form-seccion">Imagen</h2>
 
-            <div class="admin-campo-imagen">
-                <img id="previewImagen" class="admin-campo-imagen-preview" alt="" hidden>
-
-                <div class="admin-campo-imagen-controles">
-                    <input id="campoImagenArchivo" class="admin-input-file-oculto" type="file"
-                        accept="image/jpeg,image/png,image/webp">
-                    <label for="campoImagenArchivo" class="admin-boton-secundario">
-                        <i class="fa-solid fa-upload" aria-hidden="true"></i>
-                        Elegir imagen
-                    </label>
-                    <span id="imagenActualTexto" class="admin-archivo-nombre">Sin imagen todavía.</span>
+            <div id="dropzoneImagen" class="admin-dropzone" tabindex="0" role="button" aria-label="Arrastrar o elegir imagen de producto">
+                <!-- Estado: Sin imagen seleccionada -->
+                <div id="dropzoneContenidoVacio" class="admin-dropzone-contenido admin-dropzone-texto-normal">
+                    <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                    <p><strong>Arrastrá una imagen aquí</strong></p>
+                    <p>o</p>
+                    <span class="admin-boton-secundario">Elegir imagen</span>
+                    <p class="admin-dropzone-hint">JPEG, PNG o WebP · máximo 8 MB<br>Se convierte a WebP y se redimensiona automáticamente.</p>
                 </div>
+
+                <!-- Estado: Con preview (imagen seleccionada o imagen actual) -->
+                <div id="dropzoneContenidoPreview" class="admin-dropzone-contenido admin-dropzone-texto-normal" hidden>
+                    <div class="admin-preview-contenedor">
+                        <img id="previewImagen" class="admin-campo-imagen-preview-nueva" alt="Vista previa de la imagen del producto">
+                    </div>
+                    <p id="imagenNombreTexto" class="admin-archivo-nombre" style="margin-top: 10px; font-weight: 500;"></p>
+                    <div class="admin-preview-botones">
+                        <span id="btnCambiarImagen" class="admin-boton-secundario">Cambiar imagen</span>
+                        <span id="btnQuitarImagen" class="admin-boton-secundario">Quitar selección</span>
+                    </div>
+                </div>
+
+                <!-- Estado: Drag Over -->
+                <div class="admin-dropzone-texto-drag">
+                    <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true" style="font-size: var(--fs-hero); color: var(--color-primary);"></i>
+                    <p style="font-size: var(--fs-lead); font-weight: 600; margin-top: 10px; color: var(--color-text);">Soltá la imagen aquí</p>
+                </div>
+
+                <input id="campoImagenArchivo" class="admin-input-file-oculto" type="file" accept="image/jpeg,image/png,image/webp">
             </div>
-            <p class="admin-ayuda">JPEG, PNG o WebP, máx. 8 MB. Se convierte a WebP y se redimensiona automáticamente.
-            </p>
+            <p id="dropzoneFeedbackError" class="admin-mensaje-error-local" style="color: #ff8a80; font-size: var(--fs-body-sm); margin-top: 8px; text-align: center; display: none;" aria-live="polite"></p>
 
             <h2 class="admin-form-seccion">Estado</h2>
 
