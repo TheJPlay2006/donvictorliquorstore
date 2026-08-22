@@ -5675,6 +5675,34 @@ main .container {
 }
 
 /* ==========================
+   HOME — HERO AURORA
+   Inspirado en "Aurora Background" de 21st.dev (blobs de gradiente en
+   <canvas>, mezclados con globalCompositeOperation "screen"). Reescrito en
+   JS vanilla (ver inicializarAuroraHero en inicio.js) con la paleta ámbar
+   / vino de la marca en vez de un preset genérico.
+========================== */
+
+.inicio-hero-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    opacity: .9;
+    pointer-events: none;
+}
+
+.inicio-hero-grid {
+    z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .inicio-hero-aurora {
+        display: none;
+    }
+}
+
+/* ==========================
    HOME — EL DUEÑO
 ========================== */
 
