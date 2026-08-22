@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Categorías | Licores Don Víctor</title>
+    <title data-i18n="categorias.metaTitulo">Categorías | Licores Don Víctor</title>
     <link rel="icon" type="image/png" href="img/favicon.png">
 
     <!-- Bootstrap -->
@@ -16,7 +16,6 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/estilos.css">
-    <link rel="stylesheet" href="css/visual-refresh.css">
 </head>
 
 <body>
@@ -34,19 +33,19 @@
 
                 <nav class="migas-pan" aria-label="Ruta de navegación">
 
-                    <a href="index.html">Inicio</a>
+                    <a href="index.html" data-i18n="common.inicio">Inicio</a>
                     <span>/</span>
 
-                    <a href="categorias.html" id="enlaceTodasCategorias">
+                    <a href="categorias.html" id="enlaceTodasCategorias" data-i18n="categorias.breadcrumb">
                         Categorías
                     </a>
                 </nav>
 
-                <h1 id="tituloCategorias">
+                <h1 id="tituloCategorias" data-i18n="categorias.titulo">
                     Todas las categorías
                 </h1>
 
-                <p id="subtituloCategorias">
+                <p id="subtituloCategorias" data-i18n="categorias.subtitulo">
                     Explorá nuestra variedad por tipo de producto
                 </p>
 
@@ -59,7 +58,7 @@
             <div class="contenedor-categorias-pagina">
 
                 <div id="categoriasPaginaGrid" class="categorias-pagina-grid">
-                    <p class="mensaje-carga">
+                    <p class="mensaje-carga" data-i18n="producto.cargandoCategorias">
                         Cargando categorías...
                     </p>
                 </div>
@@ -72,7 +71,7 @@
 
     <!-- WhatsApp flotante -->
     <a href="https://wa.me/50672497807" target="_blank" rel="noopener noreferrer" class="whatsapp-flotante"
-        aria-label="Consultar por WhatsApp">
+        aria-label="Consultar por WhatsApp" data-i18n-aria="catalogo.whatsappFlotanteAria">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
 
@@ -87,23 +86,25 @@
 
                 <div class="modal-header">
 
-                    <h2 
-                    class="modal-title" 
+                    <h2
+                    class="modal-title"
                     id="tituloModalProducto"
+                    data-i18n="catalogo.modalDetalleTitulo"
                     >
                         Detalle del producto
                     </h2>
 
-                    <button 
-                    type="button" 
-                    class="btn-close" 
-                    data-bs-dismiss="modal" 
+                    <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
                     aria-label="Cerrar"
+                    data-i18n-aria="catalogo.modalCerrarAria"
                     ></button>
                 </div>
 
                 <div class="modal-body">
-                    <p>
+                    <p data-i18n="catalogo.modalPlaceholder">
                         Aquí aparecerá la información del producto.
                     </p>
                 </div>
@@ -115,15 +116,16 @@
     <!-- Componentes compartidos -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="js/config/supabase-client.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/componentes.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
      <script src="js/modal-producto.js"></script>
-     
+
     <script src="js/categorias.js"></script>
 
-   
+
 
 </body>
 

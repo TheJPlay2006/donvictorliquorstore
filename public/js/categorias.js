@@ -6,6 +6,25 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarBotonesDetalle();
 });
 
+window.addEventListener("dv:idioma-cambio", () => {
+    if (!categoriasPagina.length && !productosPagina.length) {
+        return;
+    }
+
+    const parametrosUrl = new URLSearchParams(window.location.search);
+    const categoriaSlug = parametrosUrl.get("categoria");
+
+    const categoriaSeleccionada = categoriasPagina.find(
+        (categoria) => crearSlug(categoria.nombre) === categoriaSlug
+    );
+
+    if (categoriaSeleccionada) {
+        mostrarProductosCategoria(categoriaSeleccionada);
+    } else {
+        mostrarCategoriasPagina();
+    }
+});
+
 async function cargarDatosCategorias() {
     const contenedor =
         document.getElementById("categoriasPaginaGrid");
@@ -58,7 +77,7 @@ async function cargarDatosCategorias() {
 
         contenedor.innerHTML = `
             <p class="mensaje-carga">
-                No fue posible cargar las categorías.
+                ${t('producto.errorCategorias')}
             </p>
         `;
     }
@@ -109,7 +128,7 @@ function mostrarCategoriasPagina() {
 
         descripcion.textContent =
             categoria.descripcion ||
-            "Productos disponibles en esta categoría.";
+            t('producto.descripcionCategoriaGenerica');
 
         const pie = document.createElement("div");
 
@@ -121,15 +140,15 @@ function mostrarCategoriasPagina() {
 
         cantidad.textContent =
             cantidadProductos === 1
-                ? "1 producto"
-                : `${cantidadProductos} productos`;
+                ? t('producto.unProducto')
+                : t('producto.nProductos').replace("{n}", cantidadProductos);
 
         const enlace = document.createElement("span");
 
         enlace.className = "enlace-categoria";
 
         enlace.innerHTML = `
-            Ver productos
+            ${t('producto.verProductos')}
             <i class="fa-solid fa-arrow-right"></i>
         `;
 
@@ -154,8 +173,7 @@ function mostrarProductosCategoria(categoria) {
 
     titulo.textContent = categoria.nombre;
 
-    subtitulo.textContent =
-        "Explorá los productos de esta categoria";
+    subtitulo.textContent = t('producto.explorarProductosCategoria');
 
     const contenedor =
         document.getElementById("categoriasPaginaGrid");
@@ -173,7 +191,7 @@ function mostrarProductosCategoria(categoria) {
 
         contenedor.innerHTML = `
         <p class="mensaje-carga">
-            No hay productos disponibles en esta categoría.
+            ${t('producto.sinProductosCategoria')}
         </p>
     `;
 
@@ -191,14 +209,14 @@ function mostrarProductosCategoria(categoria) {
 function obtenerEtiquetaProducto(producto) {
     if (producto.promocion) {
         return {
-            texto: "Promoción",
+            texto: t('producto.promocion'),
             clase: "promocion"
         };
     }
 
     if (producto.destacado) {
         return {
-            texto: "Destacado",
+            texto: t('producto.destacado'),
             clase: "destacado"
         };
     }
@@ -209,20 +227,20 @@ function obtenerEtiquetaProducto(producto) {
 function obtenerDisponibilidadProducto(producto) {
     if (producto.disponible && Number(producto.stock) > 0) {
         return {
-            texto: "Disponible",
+            texto: t('producto.disponible'),
             clase: "disponible"
         };
     }
 
     if (Number(producto.stock) <= 0) {
         return {
-            texto: "Agotado",
+            texto: t('producto.agotado'),
             clase: "agotado"
         };
     }
 
     return {
-        texto: "Consultar",
+        texto: t('producto.consultar'),
         clase: "consultar"
     };
 }
@@ -273,13 +291,13 @@ function crearTarjetaProducto(producto) {
         <div class="producto-catalogo-contenido">
 
             <p class="producto-catalogo-categoria">
-                ${producto.marca || "Sin marca"} · ${producto.categoria}
+                ${producto.marca || t('producto.sinMarca')} · ${producto.categoria}
             </p>
 
             <h3>${producto.nombre}</h3>
 
             <p class="producto-catalogo-presentacion">
-                ${producto.presentacion || "Presentación por consultar"}
+                ${producto.presentacion || t('producto.presentacionConsultar')}
             </p>
 
             <div class="producto-catalogo-info">
@@ -303,7 +321,7 @@ function crearTarjetaProducto(producto) {
                     data-id-producto="${producto.id_producto}"
                 >
                     <i class="fa-regular fa-eye"></i>
-                    Ver detalle
+                    ${t('producto.verDetalle')}
                 </button>
 
                 <a
@@ -311,7 +329,7 @@ function crearTarjetaProducto(producto) {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn-producto-whatsapp"
-                    aria-label="Consultar ${producto.nombre} por WhatsApp"
+                    aria-label="${t('producto.consultarAriaPrefijo')} ${producto.nombre} ${t('producto.consultarAriaSufijo')}"
                 >
                     <i class="fa-brands fa-whatsapp"></i>
                 </a>

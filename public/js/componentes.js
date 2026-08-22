@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     animarEntradaDeSecciones();
     animarElementosGranulares();
     inicializarAcordeones();
+    window.dvInicializarIdioma?.();
+    inicializarAnuncioSuperior();
 });
 
 function inicializarMenuMovil() {
@@ -217,11 +219,56 @@ function marcarPaginaActiva() {
 }
 
 function mostrarAnioActual() {
+    const anio = new Date().getFullYear();
     const anioActual = document.getElementById("anioActual");
 
     if (anioActual) {
-        anioActual.textContent = new Date().getFullYear();
+        anioActual.textContent = anio;
     }
+
+    document
+        .querySelectorAll(".anioActualExtra")
+        .forEach((elemento) => {
+            elemento.textContent = anio;
+        });
+}
+
+const DV_ANUNCIO_CLAVE_CERRADO = "dv_anuncio_cerrado";
+
+function inicializarAnuncioSuperior() {
+    const anuncio = document.getElementById("anuncioSuperior");
+
+    if (!anuncio) {
+        return;
+    }
+
+    let cerradoPreviamente = false;
+
+    try {
+        cerradoPreviamente =
+            window.localStorage.getItem(DV_ANUNCIO_CLAVE_CERRADO) === "true";
+    } catch (error) {
+        cerradoPreviamente = false;
+    }
+
+    if (cerradoPreviamente) {
+        anuncio.remove();
+        return;
+    }
+
+    const botonCerrar = anuncio.querySelector(".anuncio-superior-cerrar");
+
+    botonCerrar?.addEventListener("click", () => {
+        anuncio.classList.add("anuncio-superior-saliendo");
+
+        try {
+            window.localStorage.setItem(DV_ANUNCIO_CLAVE_CERRADO, "true");
+        } catch (error) {
+            // Almacenamiento no disponible: el anuncio solo se ocultará en esta vista.
+        }
+
+        setTimeout(() => anuncio.remove(), 320);
+    });
 }
 
 /* ==========================

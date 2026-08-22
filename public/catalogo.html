@@ -6,7 +6,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Catálogo | Licores Don Víctor</title>
+    <title data-i18n="catalogo.metaTitulo">Catálogo | Licores Don Víctor</title>
     <link rel="icon" type="image/png" href="img/favicon.png">
 
     <!-- Bootstrap -->
@@ -17,7 +17,6 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/estilos.css">
-    <link rel="stylesheet" href="css/visual-refresh.css">
 </head>
 
 <body>
@@ -33,14 +32,14 @@
             <div class="contenedor-catalogo">
 
                 <nav class="migas-pan" aria-label="Ruta de navegación">
-                    <a href="index.html">Inicio</a>
+                    <a href="index.html" data-i18n="common.inicio">Inicio</a>
                     <span>/</span>
-                    <span>Catálogo</span>
+                    <span data-i18n="catalogo.breadcrumb">Catálogo</span>
                 </nav>
 
-                <h1>Catálogo de productos</h1>
+                <h1 data-i18n="catalogo.titulo">Catálogo de productos</h1>
 
-                <p>
+                <p data-i18n="catalogo.subtitulo">
                     Explorá nuestra selección completa de bebidas
                     y accesorios
                 </p>
@@ -60,7 +59,8 @@
                     <i class="fa-solid fa-magnifying-glass"></i>
 
                     <input type="search" id="buscarProducto" name="buscarProducto"
-                        placeholder="Buscar por nombre, marca o código" aria-label="Buscar productos"
+                        placeholder="Buscar por nombre, marca o código" data-i18n-placeholder="catalogo.buscarPlaceholder"
+                        aria-label="Buscar productos" data-i18n-aria="catalogo.buscarPlaceholder"
                         autocomplete="off">
 
                 </div>
@@ -69,7 +69,7 @@
                     <button type="button" class="abrir-filtros" id="abrirFiltros" aria-controls="filtrosCatalogo"
                         aria-expanded="false">
                         <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-                        <span>Filtros</span>
+                        <span data-i18n="catalogo.filtrosBoton">Filtros</span>
                         <span class="resumen-filtros" id="resumenFiltros">0</span>
                         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                     </button>
@@ -81,24 +81,24 @@
                     <aside class="filtros-catalogo" id="filtrosCatalogo">
 
                         <div class="filtros-cabecera">
-                            <span>Filtros</span>
-                            <button type="button" class="cerrar-filtros" id="cerrarFiltros" aria-label="Cerrar filtros">
+                            <span data-i18n="catalogo.filtrosTitulo">Filtros</span>
+                            <button type="button" class="cerrar-filtros" id="cerrarFiltros" aria-label="Cerrar filtros" data-i18n-aria="catalogo.cerrarFiltrosAria">
                                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                             </button>
                         </div>
 
-                        <h2>Filtros</h2>
+                        <h2 data-i18n="catalogo.filtrosTitulo">Filtros</h2>
 
                         <div class="grupo-filtros">
 
-                            <h3>Categoría</h3>
+                            <h3 data-i18n="catalogo.categoriaTitulo">Categoría</h3>
 
                             <div id="filtrosCategorias" class="opciones-filtro">
                                 <button type="button" class="opcion-filtro active" data-categoria="todas">
-                                    <span>Todas las categorías</span>
+                                    <span data-i18n="catalogo.todasCategorias">Todas las categorías</span>
                                 </button>
 
-                                <p class="mensaje-carga">
+                                <p class="mensaje-carga" data-i18n="producto.cargandoCategorias">
                                     Cargando categorías...
                                 </p>
                             </div>
@@ -107,23 +107,23 @@
 
                         <div class="grupo-filtros">
 
-                            <h3>Disponibilidad</h3>
+                            <h3 data-i18n="catalogo.disponibilidadTitulo">Disponibilidad</h3>
 
                             <div class="opciones-filtro">
 
-                                <button type="button" class="opcion-filtro active" data-disponibilidad="todas">
+                                <button type="button" class="opcion-filtro active" data-disponibilidad="todas" data-i18n="catalogo.dispTodas">
                                     Todas
                                 </button>
 
-                                <button type="button" class="opcion-filtro" data-disponibilidad="disponible">
+                                <button type="button" class="opcion-filtro" data-disponibilidad="disponible" data-i18n="catalogo.dispDisponibles">
                                     Disponibles
                                 </button>
 
-                                <button type="button" class="opcion-filtro" data-disponibilidad="agotado">
+                                <button type="button" class="opcion-filtro" data-disponibilidad="agotado" data-i18n="catalogo.dispAgotado">
                                     Agotado
                                 </button>
 
-                                <button type="button" class="opcion-filtro" data-disponibilidad="consultar">
+                                <button type="button" class="opcion-filtro" data-disponibilidad="consultar" data-i18n="catalogo.dispConsultar">
                                     Consultar
                                 </button>
 
@@ -131,7 +131,7 @@
 
                         </div>
 
-                        <button type="button" class="aplicar-filtros" id="aplicarFiltros">
+                        <button type="button" class="aplicar-filtros" id="aplicarFiltros" data-i18n="catalogo.verProductos">
                             Ver productos
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </button>
@@ -143,26 +143,26 @@
 
                         <div class="barra-resultados">
 
-                            <p id="cantidadProductos">
+                            <p id="cantidadProductos" data-i18n="producto.cargandoProductos">
                                 Cargando productos...
                             </p>
 
                             <div class="controles-resultados">
 
                                 <select id="ordenarProductos" name="ordenarProductos" aria-label="Ordenar productos">
-                                    <option value="nombre-asc">
+                                    <option value="nombre-asc" data-i18n="catalogo.ordenNombreAsc">
                                         Nombre: A-Z
                                     </option>
 
-                                    <option value="nombre-desc">
+                                    <option value="nombre-desc" data-i18n="catalogo.ordenNombreDesc">
                                         Nombre: Z-A
                                     </option>
 
-                                    <option value="precio-asc">
+                                    <option value="precio-asc" data-i18n="catalogo.ordenPrecioAsc">
                                         Precio: menor a mayor
                                     </option>
 
-                                    <option value="precio-desc">
+                                    <option value="precio-desc" data-i18n="catalogo.ordenPrecioDesc">
                                         Precio: mayor a menor
                                     </option>
                                 </select>
@@ -170,12 +170,12 @@
                                 <div class="botones-vista">
 
                                     <button type="button" class="boton-vista active" data-vista="cuadricula"
-                                        aria-label="Vista en cuadrícula">
+                                        aria-label="Vista en cuadrícula" data-i18n-aria="catalogo.vistaCuadricula">
                                         <i class="fa-solid fa-table-cells-large"></i>
                                     </button>
 
                                     <button type="button" class="boton-vista" data-vista="lista"
-                                        aria-label="Vista en lista">
+                                        aria-label="Vista en lista" data-i18n-aria="catalogo.vistaLista">
                                         <i class="fa-solid fa-list"></i>
                                     </button>
 
@@ -186,12 +186,12 @@
                         </div>
 
                         <div id="productosCatalogo" class="productos-catalogo-grid">
-                            <p class="mensaje-carga">
+                            <p class="mensaje-carga" data-i18n="producto.cargandoProductos">
                                 Cargando productos...
                             </p>
                         </div>
 
-                        <button type="button" class="catalogo-cargar-mas" id="cargarMasProductos">
+                        <button type="button" class="catalogo-cargar-mas" id="cargarMasProductos" data-i18n="catalogo.cargarMasBoton">
                             Cargar más productos
                             <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                         </button>
@@ -201,7 +201,7 @@
                 </div>
 
                 <button type="button" class="filtros-fondo" id="fondoFiltros" tabindex="-1"
-                    aria-label="Cerrar filtros"></button>
+                    aria-label="Cerrar filtros" data-i18n-aria="catalogo.cerrarFiltrosAria"></button>
 
             </div>
 
@@ -211,7 +211,7 @@
     <!-- WhatsApp flotante -->
 
     <a href="https://wa.me/50672497807" target="_blank" rel="noopener noreferrer" class="whatsapp-flotante"
-        aria-label="Consultar por WhatsApp">
+        aria-label="Consultar por WhatsApp" data-i18n-aria="catalogo.whatsappFlotanteAria">
         <i class="fa-brands fa-whatsapp"></i>
     </a>
 
@@ -232,6 +232,7 @@
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="js/config/supabase-client.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/componentes.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">

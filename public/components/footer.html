@@ -4,7 +4,7 @@
             <div class="col-lg-3 col-md-6 footer-col">
                 <div class="footer-info">
                     <img src="img/logo.png" alt="Licores Don Víctor" class="footer-logo">
-                    <p>
+                    <p data-i18n="footer.descripcion">
                         Licorera especializada en La Fortuna de San Carlos.
                         Bebidas, cristalería y productos para coctelería.
                     </p>
@@ -23,40 +23,40 @@
             </div>
 
             <div class="col-lg-3 col-md-6 footer-col">
-                <h3>Navegación</h3>
+                <h3 data-i18n="footer.navegacion">Navegación</h3>
                 <ul>
-                    <li><a href="index.html">Inicio</a></li>
-                    <li><a href="catalogo.html">Catálogo</a></li>
-                    <li><a href="categorias.html">Categorías</a></li>
-                    <li><a href="nosotros.html">Nosotros</a></li>
-                    <li><a href="contacto.html">Contacto</a></li>
+                    <li><a href="index.html" data-i18n="nav.inicio">Inicio</a></li>
+                    <li><a href="catalogo.html" data-i18n="nav.catalogo">Catálogo</a></li>
+                    <li><a href="categorias.html" data-i18n="nav.categorias">Categorías</a></li>
+                    <li><a href="nosotros.html" data-i18n="nav.nosotros">Nosotros</a></li>
+                    <li><a href="contacto.html" data-i18n="nav.contacto">Contacto</a></li>
                 </ul>
             </div>
 
             <div class="col-lg-3 col-md-6 footer-col">
-                <h3>Categorías</h3>
+                <h3 data-i18n="footer.categoriasTitulo">Categorías</h3>
                 <ul>
-                    <li><a href="categorias.html?categoria=cervezas">Cervezas</a></li>
-                    <li><a href="categorias.html?categoria=vinos-y-espumantes">Vinos y espumantes</a></li>
-                    <li><a href="categorias.html?categoria=whisky-y-bourbon">Whisky y bourbon</a></li>
-                    <li><a href="categorias.html?categoria=ron">Ron</a></li>
-                    <li><a href="categorias.html?categoria=vodka">Vodka</a></li>
-                    <li><a href="categorias.html?categoria=tequila-y-mezcal">Tequila y mezcal</a></li>
-                    <li><a href="categorias.html?categoria=ginebra">Ginebra</a></li>
+                    <li><a href="categorias.html?categoria=cervezas" data-i18n="footer.catCervezas">Cervezas</a></li>
+                    <li><a href="categorias.html?categoria=vinos-y-espumantes" data-i18n="footer.catVinos">Vinos y espumantes</a></li>
+                    <li><a href="categorias.html?categoria=whisky-y-bourbon" data-i18n="footer.catWhisky">Whisky y bourbon</a></li>
+                    <li><a href="categorias.html?categoria=ron" data-i18n="footer.catRon">Ron</a></li>
+                    <li><a href="categorias.html?categoria=vodka" data-i18n="footer.catVodka">Vodka</a></li>
+                    <li><a href="categorias.html?categoria=tequila-y-mezcal" data-i18n="footer.catTequila">Tequila y mezcal</a></li>
+                    <li><a href="categorias.html?categoria=ginebra" data-i18n="footer.catGinebra">Ginebra</a></li>
                 </ul>
             </div>
 
             <div class="col-lg-3 col-md-6 footer-col footer-contacto">
-                <h3>Contacto</h3>
+                <h3 data-i18n="footer.contactoTitulo">Contacto</h3>
                 <p>
                     <a href="https://www.google.com/maps/search/?api=1&query=F9C5%2BFRG%20Don%20Victor%20Liquor%20Store%2C%20Provincia%20de%20Alajuela%2C%20La%20Fortuna" target="_blank" rel="noopener noreferrer" class="contact-link">
                         <span class="contact-icon"><i class="fa-solid fa-location-dot" aria-hidden="true"></i></span>
-                        <span>La Fortuna de San Carlos, Alajuela, Costa Rica</span>
+                        <span data-i18n="footer.direccion">La Fortuna de San Carlos, Alajuela, Costa Rica</span>
                     </a>
                 </p>
                 <p>
                     <span class="contact-icon"><i class="fa-regular fa-clock" aria-hidden="true"></i></span>
-                    <span>Lun–Sáb: 9 a. m.–9 p. m. · Dom: 10 a. m.–7 p. m.</span>
+                    <span data-i18n="footer.horario">Lun–Sáb: 9 a. m.–9 p. m. · Dom: 10 a. m.–7 p. m.</span>
                 </p>
                 <p>
                     <a href="tel:+50672497807" class="contact-link">
@@ -67,7 +67,7 @@
                 <p>
                     <a href="https://wa.me/50672497807" target="_blank" rel="noopener noreferrer" class="contact-link whatsapp-link">
                         <span class="contact-icon"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></span>
-                        <span>WhatsApp directo</span>
+                        <span data-i18n="footer.whatsappDirecto">WhatsApp directo</span>
                     </a>
                 </p>
             </div>
@@ -75,7 +75,23 @@
     </div>
 
     <div class="footer-legal">
-        <p>🔞 Venta exclusiva a mayores de 18 años. Consumo responsable. Prohibida la venta a menores de edad.</p>
-        <p>La disponibilidad y los precios pueden cambiar. &copy; <span id="anioActual"></span> Licores Don Víctor.</p>
+        <p data-i18n="footer.avisoEdad">🔞 Venta exclusiva a mayores de 18 años. Consumo responsable. Prohibida la venta a menores de edad.</p>
+        <p><span data-i18n="footer.avisoPrecios">La disponibilidad y los precios pueden cambiar.</span> &copy; <span id="anioActual"></span> Licores Don Víctor.</p>
+
+        <div class="footer-legal-extra">
+            <p class="footer-legal-enlaces">
+                &copy; <span class="anioActualExtra"></span> Don Victor Liquor Store
+                <span aria-hidden="true">·</span>
+                <a href="disclaimer.html" data-i18n="footer.disclaimer">Disclaimer</a>
+                <span aria-hidden="true">·</span>
+                <a href="terminos.html" data-i18n="footer.terminos">Terms of Use</a>
+                <span aria-hidden="true">·</span>
+                <a href="privacidad.html" data-i18n="footer.privacidad">Privacy Policy</a>
+            </p>
+            <p class="footer-legal-credito">
+                <span data-i18n="footer.creditoPrefijo">Website &amp; branding by</span>
+                Emesis Mairena, Jairo Herrera y Franklin Umaña
+            </p>
+        </div>
     </div>
 </footer>

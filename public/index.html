@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inicio | Licores Don Víctor</title>
+    <title data-i18n="inicio.metaTitulo">Inicio | Licores Don Víctor</title>
     <link rel="icon" type="image/png" href="img/favicon.png">
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,10 +14,29 @@
 
     <!-- CSS -->
     <link rel="stylesheet" href="css/estilos.css">
-    <link rel="stylesheet" href="css/visual-refresh.css">
 </head>
 
 <body>
+
+    <!-- Anuncio superior -->
+    <div class="anuncio-superior" id="anuncioSuperior" role="region" aria-label="Anuncio">
+        <div class="anuncio-superior-interior">
+            <p>
+                <i class="fa-solid fa-bottle-droplet anuncio-superior-icono" aria-hidden="true"></i>
+                <span data-i18n="anuncio.texto">Pedí tu licor favorito y coordiná la entrega directo por WhatsApp — respuesta rápida, todos los días.</span>
+            </p>
+            <div class="anuncio-superior-acciones">
+                <a href="https://wa.me/50672497807?text=Hola,%20quiero%20hacer%20un%20pedido."
+                    target="_blank" rel="noopener noreferrer" class="anuncio-superior-boton">
+                    <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+                    <span data-i18n="anuncio.boton">Escribir ahora</span>
+                </a>
+                <button type="button" class="anuncio-superior-cerrar" aria-label="Cerrar anuncio" data-i18n-aria="anuncio.cerrarAria">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Header reutilizable -->
     <div id="header-container"></div>
@@ -33,29 +52,29 @@
                         La Fortuna, Costa Rica
                     </span>
 
-                    <h1 id="inicioTitulo">La bebida correcta para cada ocasión</h1>
+                    <h1 id="inicioTitulo" data-i18n="inicio.heroTitulo">La bebida correcta para cada ocasión</h1>
 
-                    <p>
+                    <p data-i18n="inicio.heroTexto">
                         Licores nacionales e importados, cervezas, vinos, cristalería
                         y artículos para coctelería con atención directa y cercana.
                     </p>
 
                     <div class="inicio-hero-acciones">
-                        <a href="catalogo.html" class="boton-primario">
+                        <a href="catalogo.html" class="boton-primario" data-i18n="common.verCatalogo">
                             Ver catálogo
                             <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                         </a>
                         <a href="https://wa.me/50672497807?text=Hola,%20deseo%20consultar%20por%20un%20producto."
-                            target="_blank" rel="noopener noreferrer" class="boton-secundario boton-secundario-whatsapp">
+                            target="_blank" rel="noopener noreferrer" class="boton-secundario boton-secundario-whatsapp" data-i18n="common.consultar">
                             <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
                             Consultar
                         </a>
                     </div>
 
                     <div class="inicio-hero-datos" aria-label="Información de la tienda">
-                        <span><strong>200+</strong> productos</span>
-                        <span><strong>Atención</strong> por WhatsApp</span>
-                        <span><strong>Lun–Sáb</strong> 9 a. m.–9 p. m.</span>
+                        <span><strong>200+</strong> <span data-i18n="inicio.datoProductos">productos</span></span>
+                        <span><strong data-i18n="inicio.datoAtencionFuerte">Atención</strong><span data-i18n="inicio.datoAtencionTexto"> por WhatsApp</span></span>
+                        <span><strong data-i18n="inicio.datoHorarioFuerte">Lun–Sáb</strong><span data-i18n="inicio.datoHorarioTexto"> 9 a. m.–9 p. m.</span></span>
                     </div>
                 </div>
 
@@ -66,7 +85,7 @@
                         <span class="inicio-hero-visual-icono" aria-hidden="true">
                             <i class="fa-solid fa-wine-bottle"></i>
                         </span>
-                        <span><small>Comprá con confianza</small><strong>Precio y disponibilidad reales</strong></span>
+                        <span><small data-i18n="inicio.visualPequeno">Comprá con confianza</small><strong data-i18n="inicio.visualFuerte">Precio y disponibilidad reales</strong></span>
                     </figcaption>
                 </figure>
             </div>
@@ -78,23 +97,23 @@
 
                 <div class="categorias-encabezado">
 
-                    <span class="seccion-etiqueta">Explorá</span>
+                    <span class="seccion-etiqueta" data-i18n="inicio.categoriasEtiqueta">Explorá</span>
 
-                    <h2>Categorías destacadas</h2>
+                    <h2 data-i18n="inicio.categoriasTitulo">Categorías destacadas</h2>
 
-                    <p>
+                    <p data-i18n="inicio.categoriasTexto">
                         Explorá por tipo de bebida o producto
                     </p>
 
                 </div>
 
                 <div class="categorias-grid" id="categoriasGrid">
-                    <p>Cargando categorías...</p>
+                    <p data-i18n="producto.cargandoCategorias">Cargando categorías...</p>
                 </div>
 
                 <div class="categorias-boton">
 
-                    <a href="categorias.html">
+                    <a href="categorias.html" data-i18n="inicio.verTodasCategorias">
 
                         Ver todas las categorías
 
@@ -116,14 +135,14 @@
                 <div class="productos-encabezado">
 
                     <div>
-                        <h2>Productos destacados</h2>
+                        <h2 data-i18n="inicio.productosTitulo">Productos destacados</h2>
 
-                        <p>
+                        <p data-i18n="inicio.productosTexto">
                             Selección de nuestros productos más populares
                         </p>
                     </div>
 
-                    <a href="catalogo.html" class="productos-ver-todos">
+                    <a href="catalogo.html" class="productos-ver-todos" data-i18n="inicio.verTodos">
                         Ver todos
                         <i class="fa-solid fa-arrow-right"></i>
                     </a>
@@ -131,7 +150,7 @@
                 </div>
 
                 <div class="productos-grid" id="productosDestacadosGrid">
-                    <p>Cargando productos destacados...</p>
+                    <p data-i18n="producto.cargandoProductosDestacados">Cargando productos destacados...</p>
                 </div>
 
             </div>
@@ -148,16 +167,16 @@
                     <i class="fa-solid fa-clipboard-list"></i>
                 </div>
 
-                <h2>¿Necesitás productos en cantidad?</h2>
+                <h2 data-i18n="inicio.cotizacionTitulo">¿Necesitás productos en cantidad?</h2>
 
-                <p>
+                <p data-i18n="inicio.cotizacionTexto">
                     Atendemos consultas de empresas, eventos, comercios y clientes
                     que requieren cantidades especiales. Contactanos para coordinar
                     una cotización personalizada.
                 </p>
 
                 <a href="https://wa.me/50672497807?text=Hola,%20deseo%20solicitar%20una%20cotización%20por%20productos%20en%20cantidad."
-                    target="_blank" rel="noopener noreferrer" class="btn-cotizacion">
+                    target="_blank" rel="noopener noreferrer" class="btn-cotizacion" data-i18n="inicio.solicitarCotizacion">
                     <i class="fa-brands fa-whatsapp"></i>
                     Solicitar cotización
                 </a>
@@ -172,7 +191,7 @@
 
             <div class="container">
 
-                <h2>¿Por qué elegirnos?</h2>
+                <h2 data-i18n="inicio.beneficiosTitulo">¿Por qué elegirnos?</h2>
 
                 <div class="beneficios-grid">
 
@@ -182,9 +201,9 @@
                             <i class="fa-solid fa-cube"></i>
                         </div>
 
-                        <h3>Gran variedad</h3>
+                        <h3 data-i18n="inicio.beneficio1Titulo">Gran variedad</h3>
 
-                        <p>
+                        <p data-i18n="inicio.beneficio1Texto">
                             Más de 200 productos entre bebidas, cristalería
                             y accesorios para coctelería.
                         </p>
@@ -197,9 +216,9 @@
                             <i class="fa-regular fa-star"></i>
                         </div>
 
-                        <h3>Precios claros</h3>
+                        <h3 data-i18n="inicio.beneficio2Titulo">Precios claros</h3>
 
-                        <p>
+                        <p data-i18n="inicio.beneficio2Texto">
                             Precios en colones costarricenses, fáciles de consultar
                             sin sorpresas.
                         </p>
@@ -212,9 +231,9 @@
                             <i class="fa-solid fa-bolt"></i>
                         </div>
 
-                        <h3>Respuesta rápida</h3>
+                        <h3 data-i18n="inicio.beneficio3Titulo">Respuesta rápida</h3>
 
-                        <p>
+                        <p data-i18n="inicio.beneficio3Texto">
                             Atención directa por WhatsApp. Te respondemos
                             a la brevedad.
                         </p>
@@ -227,9 +246,9 @@
                             <i class="fa-solid fa-user-group"></i>
                         </div>
 
-                        <h3>Clientes y empresas</h3>
+                        <h3 data-i18n="inicio.beneficio4Titulo">Clientes y empresas</h3>
 
-                        <p>
+                        <p data-i18n="inicio.beneficio4Texto">
                             Servicio para particulares, eventos, restaurantes
                             y comercios.
                         </p>
@@ -248,9 +267,9 @@
 
             <div class="container redes-contenido">
 
-                <h2>Seguinos en redes sociales</h2>
+                <h2 data-i18n="inicio.redesTitulo">Seguinos en redes sociales</h2>
 
-                <p>
+                <p data-i18n="inicio.redesTexto">
                     Conocé novedades, promociones y más en nuestras redes.
                 </p>
 
@@ -282,13 +301,13 @@
 
                 <div class="ubicacion-informacion">
 
-                    <span class="seccion-etiqueta">
+                    <span class="seccion-etiqueta" data-i18n="inicio.ubicacionEtiqueta">
                         Visitanos
                     </span>
 
-                    <h2>Ubicación y contacto</h2>
+                    <h2 data-i18n="inicio.ubicacionTitulo">Ubicación y contacto</h2>
 
-                    <p class="ubicacion-descripcion">
+                    <p class="ubicacion-descripcion" data-i18n="inicio.ubicacionTexto">
                         Estamos disponibles para atender consultas sobre productos,
                         precios, disponibilidad y pedidos especiales.
                     </p>
@@ -302,9 +321,9 @@
                             </div>
 
                             <div>
-                                <span>Dirección</span>
+                                <span data-i18n="inicio.direccionLabel">Dirección</span>
 
-                                <p>
+                                <p data-i18n="inicio.direccionTexto">
                                     Del Banco de Costa Rica 100 metros sur y 100 oeste, La Fortuna, Costa Rica
                                 </p>
                             </div>
@@ -318,9 +337,9 @@
                             </div>
 
                             <div>
-                                <span>Horario</span>
+                                <span data-i18n="inicio.horarioLabel">Horario</span>
 
-                                <p>
+                                <p data-i18n-html="inicio.horarioTextoHtml">
                                     Lunes a sábado: 9:00 a. m. – 9:00 p. m.
                                     <br>
                                     Domingo: 10:00 a. m. – 7:00 p. m.
@@ -336,7 +355,7 @@
                             </div>
 
                             <div>
-                                <span>Teléfono</span>
+                                <span data-i18n="inicio.telefonoLabel">Teléfono</span>
 
                                 <a href="tel:+50672497807">
                                     +506 7249-7807
@@ -366,13 +385,13 @@
                     <div class="ubicacion-acciones">
 
                         <a href="https://www.google.com/maps/search/?api=1&query=F9C5%2BFRG%20Don%20Victor%20Liquor%20Store%2C%20Provincia%20de%20Alajuela%2C%20La%20Fortuna"
-                            target="_blank" rel="noopener noreferrer" class="btn-como-llegar">
+                            target="_blank" rel="noopener noreferrer" class="btn-como-llegar" data-i18n="inicio.comoLlegar">
                             <i class="fa-solid fa-route"></i>
                             Cómo llegar
                         </a>
 
                         <a href="https://wa.me/50672497807?text=Hola,%20deseo%20realizar%20una%20consulta."
-                            target="_blank" rel="noopener noreferrer" class="btn-contacto-whatsapp">
+                            target="_blank" rel="noopener noreferrer" class="btn-contacto-whatsapp" data-i18n="common.consultar">
                             <i class="fa-brands fa-whatsapp"></i>
                             Consultar
                         </a>
@@ -413,6 +432,7 @@
     <!-- Componentes compartidos -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="js/config/supabase-client.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/componentes.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

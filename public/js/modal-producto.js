@@ -32,7 +32,7 @@ function mostrarModalProductoCatalogo(producto) {
                 type="button"
                 class="btn-close"
                 data-bs-dismiss="modal"
-                aria-label="Cerrar"
+                aria-label="${t('producto.cerrar')}"
             ></button>
 
         </div>
@@ -53,21 +53,21 @@ function mostrarModalProductoCatalogo(producto) {
                 <div class="modal-producto-informacion">
 
                     <p>
-                        ${producto.marca || "Sin marca"} ·
+                        ${producto.marca || t('producto.sinMarca')} ·
                         ${producto.categoria}
                     </p>
 
                     <p>
                         ${
                             producto.presentacion ||
-                            "Presentación por consultar"
+                            t('producto.presentacionConsultar')
                         }
                     </p>
 
                     <p class="modal-producto-descripcion">
                         ${
                             producto.descripcion ||
-                            "Descripción no disponible."
+                            t('producto.descripcionNoDisponible')
                         }
                     </p>
 
@@ -92,7 +92,7 @@ function mostrarModalProductoCatalogo(producto) {
                             class="modal-producto-whatsapp"
                         >
                             <i class="fa-brands fa-whatsapp"></i>
-                            Consultar por WhatsApp
+                            ${t('producto.consultarWhatsApp')}
                         </a>
 
                         <button
@@ -100,7 +100,7 @@ function mostrarModalProductoCatalogo(producto) {
                             class="modal-producto-cerrar"
                             data-bs-dismiss="modal"
                         >
-                            Cerrar
+                            ${t('producto.cerrar')}
                         </button>
 
                     </div>

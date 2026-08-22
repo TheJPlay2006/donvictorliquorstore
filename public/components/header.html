@@ -1,31 +1,44 @@
 <header class="navbar">
     <div class="navbar-interior">
         <div class="logo">
-            <a href="index.html" aria-label="Licores Don Víctor, inicio">
+            <a href="index.html" aria-label="Licores Don Víctor, inicio" data-i18n-aria="nav.logoInicio">
                 <img src="img/logo.png" alt="Licores Don Víctor">
             </a>
         </div>
 
-        <nav class="menu" id="menuPrincipal" aria-label="Navegación principal">
+        <nav class="menu" id="menuPrincipal" aria-label="Navegación principal" data-i18n-aria="nav.navegacionPrincipal">
             <div class="menu-cabecera-movil">
-                <span>Menú</span>
-                <button type="button" class="menu-cerrar" aria-label="Cerrar menú">
+                <span data-i18n="nav.menuTitulo">Menú</span>
+                <button type="button" class="menu-cerrar" aria-label="Cerrar menú" data-i18n-aria="nav.cerrarMenu">
                     <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
             <ul>
-                <li><a href="index.html">Inicio</a></li>
-                <li><a href="catalogo.html">Catálogo</a></li>
-                <li><a href="categorias.html">Categorías</a></li>
-                <li><a href="nosotros.html">Nosotros</a></li>
-                <li><a href="contacto.html">Contacto</a></li>
+                <li><a href="index.html" data-i18n="nav.inicio">Inicio</a></li>
+                <li><a href="catalogo.html" data-i18n="nav.catalogo">Catálogo</a></li>
+                <li><a href="categorias.html" data-i18n="nav.categorias">Categorías</a></li>
+                <li><a href="nosotros.html" data-i18n="nav.nosotros">Nosotros</a></li>
+                <li><a href="contacto.html" data-i18n="nav.contacto">Contacto</a></li>
             </ul>
         </nav>
 
         <div class="acciones">
-            <a href="catalogo.html" class="icono-header icono-busqueda" aria-label="Buscar productos">
+            <a href="catalogo.html" class="icono-header icono-busqueda" aria-label="Buscar productos" data-i18n-aria="nav.buscarProductos">
                 <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
             </a>
+
+            <button type="button" class="selector-idioma" id="botonIdioma" data-idioma-activo="es" aria-pressed="false" aria-label="Cambiar a inglés" data-i18n-aria="idioma.cambiarAIngles">
+                <span class="selector-idioma-riel">
+                    <span class="selector-idioma-opcion" data-opcion="es">
+                        <span class="selector-idioma-bandera" aria-hidden="true">🇪🇸</span>ES
+                    </span>
+                    <span class="selector-idioma-opcion" data-opcion="en">
+                        <span class="selector-idioma-bandera" aria-hidden="true">🇺🇸</span>EN
+                    </span>
+                    <span class="selector-idioma-thumb" aria-hidden="true"></span>
+                </span>
+            </button>
+
             <a href="https://www.facebook.com/donvictorliquorstore/" target="_blank" rel="noopener noreferrer" class="icono-header icono-social-header" aria-label="Facebook">
                 <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
             </a>
@@ -38,10 +51,10 @@
             </a>
         </div>
 
-        <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="menuPrincipal" aria-label="Abrir menú">
+        <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="menuPrincipal" aria-label="Abrir menú" data-i18n-aria="nav.abrirMenu">
             <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
     </div>
 
-    <button type="button" class="menu-fondo" tabindex="-1" aria-label="Cerrar menú"></button>
+    <button type="button" class="menu-fondo" tabindex="-1" aria-label="Cerrar menú" data-i18n-aria="nav.cerrarMenu"></button>
 </header>

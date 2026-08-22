@@ -40,6 +40,25 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarBotonesDetalleCatalogo();
 });
 
+window.addEventListener("dv:idioma-cambio", () => {
+    if (!productosCatalogo.length) {
+        return;
+    }
+
+    mostrarFiltrosCategorias();
+
+    document
+        .querySelectorAll("#filtrosCategorias [data-categoria]")
+        .forEach((boton) => {
+            boton.classList.toggle(
+                "active",
+                boton.dataset.categoria === categoriaSeleccionada
+            );
+        });
+
+    buscarProductos();
+});
+
 function obtenerCantidadInicial() {
     return window.matchMedia("(max-width: 575.98px)").matches ? 6 : 12;
 }
@@ -90,14 +109,13 @@ async function cargarDatosCatalogo() {
 
         document.getElementById(
             "cantidadProductos"
-        ).textContent =
-            "No fue posible cargar los productos";
+        ).textContent = t('producto.errorCargarCatalogo');
 
         document.getElementById(
             "productosCatalogo"
         ).innerHTML = `
             <p class="mensaje-carga">
-                Ocurrió un error al cargar el catálogo.
+                ${t('producto.errorCatalogo')}
             </p>
         `;
     }
@@ -137,8 +155,8 @@ function mostrarCantidadProductos(cantidad) {
 
     const texto =
         cantidad === 1
-            ? "Se encontró 1 producto"
-            : `Se encontraron ${cantidad} productos`;
+            ? t('producto.unEncontrado')
+            : t('producto.nEncontrados').replace("{n}", cantidad);
 
     document.getElementById(
         "cantidadProductos"
@@ -159,7 +177,7 @@ function mostrarFiltrosCategorias() {
     const botonTodas =
         crearBotonCategoria(
             "todas",
-            "Todas las categorías",
+            t('catalogo.todasCategorias'),
             productosCatalogo.length,
             true
         );
@@ -244,7 +262,7 @@ function mostrarProductos(productos) {
 
         contenedor.innerHTML = `
             <p class="mensaje-carga">
-                No se encontraron productos.
+                ${t('producto.sinResultados')}
             </p>
         `;
 
@@ -281,7 +299,7 @@ function actualizarBotonCargaProgresiva() {
     const restantes = Math.max(productosFiltrados.length - cantidadVisible, 0);
     boton.classList.toggle("visible", restantes > 0);
     boton.innerHTML = restantes > 0
-        ? `Cargar más <span>(${restantes})</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>`
+        ? `${t('producto.cargarMasCorto')} <span>(${restantes})</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>`
         : "";
 }
 
@@ -336,7 +354,7 @@ function crearTarjetaProducto(producto) {
         <div class="producto-catalogo-contenido">
 
             <p class="producto-catalogo-categoria">
-                ${producto.marca || "Sin marca"} ·
+                ${producto.marca || t('producto.sinMarca')} ·
                 ${producto.categoria}
             </p>
 
@@ -346,7 +364,7 @@ function crearTarjetaProducto(producto) {
 
             <p class="producto-catalogo-presentacion">
                 ${producto.presentacion ||
-        "Presentación por consultar"
+        t('producto.presentacionConsultar')
         }
             </p>
 
@@ -371,7 +389,7 @@ function crearTarjetaProducto(producto) {
                     data-id-producto="${producto.id_producto}"
                 >
                     <i class="fa-regular fa-eye"></i>
-                    Ver detalle
+                    ${t('producto.verDetalle')}
                 </button>
 
                 <a
@@ -379,7 +397,7 @@ function crearTarjetaProducto(producto) {
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn-producto-whatsapp"
-                    aria-label="Consultar ${producto.nombre} por WhatsApp"
+                    aria-label="${t('producto.consultarAriaPrefijo')} ${producto.nombre} ${t('producto.consultarAriaSufijo')}"
                 >
                     <i class="fa-brands fa-whatsapp"></i>
                 </a>
@@ -399,7 +417,7 @@ function obtenerEtiquetaProducto(producto) {
     if (producto.promocion) {
 
         return {
-            texto: "Promoción",
+            texto: t('producto.promocion'),
             clase: "promocion"
         };
 
@@ -408,7 +426,7 @@ function obtenerEtiquetaProducto(producto) {
     if (producto.destacado) {
 
         return {
-            texto: "Destacado",
+            texto: t('producto.destacado'),
             clase: "destacado"
         };
 
@@ -427,7 +445,7 @@ function obtenerDisponibilidadProducto(producto) {
     ) {
 
         return {
-            texto: "Disponible",
+            texto: t('producto.disponible'),
             clase: "disponible"
         };
 
@@ -436,14 +454,14 @@ function obtenerDisponibilidadProducto(producto) {
     if (Number(producto.stock) <= 0) {
 
         return {
-            texto: "Agotado",
+            texto: t('producto.agotado'),
             clase: "agotado"
         };
 
     }
 
     return {
-        texto: "Consultar",
+        texto: t('producto.consultar'),
         clase: "consultar"
     };
 

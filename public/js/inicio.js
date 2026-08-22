@@ -1,9 +1,15 @@
 let productosDestacados = [];
+let categoriasInicio = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     cargarCategorias();
     cargarProductosDestacados();
     configurarBotonesDetalle();
+});
+
+window.addEventListener('dv:idioma-cambio', () => {
+    mostrarCategorias(categoriasInicio);
+    mostrarProductosDestacados(productosDestacados);
 });
 
 /* ==========================
@@ -29,13 +35,15 @@ async function cargarCategorias() {
             throw error;
         }
 
-        mostrarCategorias((data || []).slice(0, 4));
+        categoriasInicio = (data || []).slice(0, 4);
+
+        mostrarCategorias(categoriasInicio);
     } catch (error) {
         console.error('Error al cargar las categorías:', error);
 
         categoriasGrid.innerHTML = `
             <p class="mensaje-error">
-                No fue posible cargar las categorías.
+                ${t('producto.errorCategorias')}
             </p>
         `;
     }
@@ -50,7 +58,7 @@ function mostrarCategorias(categorias) {
 
     if (!Array.isArray(categorias) || categorias.length === 0) {
         categoriasGrid.innerHTML = `
-            <p>No hay categorías disponibles.</p>
+            <p>${t('producto.sinCategorias')}</p>
         `;
 
         return;
@@ -80,7 +88,7 @@ function mostrarCategorias(categorias) {
                         <h2>${nombre}</h2>
 
                         <span>
-                            Ver productos
+                            ${t('producto.verProductos')}
                             <i class="fa-solid fa-arrow-right"></i>
                         </span>
                     </div>
@@ -132,7 +140,7 @@ async function cargarProductosDestacados() {
 
         productosGrid.innerHTML = `
             <p class="mensaje-error">
-                No fue posible cargar los productos destacados.
+                ${t('producto.errorProductosDestacados')}
             </p>
         `;
     }
@@ -149,7 +157,7 @@ function mostrarProductosDestacados(productos) {
 
     if (!Array.isArray(productos) || productos.length === 0) {
         productosGrid.innerHTML = `
-            <p>No hay productos destacados disponibles.</p>
+            <p>${t('producto.sinProductosDestacados')}</p>
         `;
 
         return;
@@ -223,7 +231,7 @@ function mostrarProductosDestacados(productos) {
                                 data-id-producto="${producto.id_producto}"
                             >
                                 <i class="fa-regular fa-eye"></i>
-                                Ver detalle
+                                ${t('producto.verDetalle')}
                             </button>
 
                             <a
@@ -231,7 +239,7 @@ function mostrarProductosDestacados(productos) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="btn-producto-whatsapp"
-                                aria-label="Consultar ${nombre} por WhatsApp"
+                                aria-label="${t('producto.consultarAriaPrefijo')} ${nombre} ${t('producto.consultarAriaSufijo')}"
                             >
                                 <i class="fa-brands fa-whatsapp"></i>
                             </a>
@@ -249,14 +257,14 @@ function mostrarProductosDestacados(productos) {
 function obtenerEtiquetaProducto(producto) {
     if (producto.promocion) {
         return {
-            texto: "Promoción",
+            texto: t('producto.promocion'),
             clase: "promocion"
         };
     }
 
     if (producto.destacado) {
         return {
-            texto: "Destacado",
+            texto: t('producto.destacado'),
             clase: "destacado"
         };
     }
@@ -267,13 +275,13 @@ function obtenerEtiquetaProducto(producto) {
 function obtenerDisponibilidadProducto(producto) {
     if (producto.disponible) {
         return {
-            texto: "Disponible",
+            texto: t('producto.disponible'),
             clase: "disponible"
         };
     }
 
     return {
-        texto: "Agotado",
+        texto: t('producto.agotado'),
         clase: "agotado"
     };
 }
