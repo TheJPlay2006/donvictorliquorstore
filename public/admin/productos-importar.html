@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar productos | Panel Admin · Don Víctor</title>
+    <link rel="icon" type="image/png" href="img/favicon.png">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="css/estilos.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-body" style="visibility:hidden">
+    <header class="admin-topbar">
+        <div class="admin-topbar-marca">
+            <img src="img/logo.png" alt="Licores Don Víctor">
+            <span>Panel Admin</span>
+        </div>
+
+        <nav class="admin-topbar-nav" aria-label="Navegación admin">
+            <a href="index.html">Inicio</a>
+            <a href="productos.html" class="active">Productos</a>
+            <a href="categorias.html">Categorías</a>
+        </nav>
+
+        <div class="admin-topbar-usuario">
+            <span id="adminNombreUsuario"></span>
+            <a href="https://donvictorliquorstore.vercel.app/" class="admin-topbar-ver-sitio" target="_blank" rel="noopener noreferrer">
+                <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                Ver sitio
+            </a>
+            <button id="adminCerrarSesion" type="button" class="admin-boton-secundario">
+                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                Cerrar sesión
+            </button>
+        </div>
+    </header>
+
+    <main class="admin-contenido">
+        <p class="admin-migas"><a href="productos.html">Productos</a> / <span>Importar productos</span></p>
+
+        <div class="admin-encabezado-lista">
+            <h1>Importar productos</h1>
+        </div>
+
+        <!-- Paso 1 -->
+        <section class="admin-panel-inline">
+            <h2 class="admin-panel-titulo">Paso 1 · Descargar plantilla</h2>
+            <p class="admin-ayuda admin-ayuda-lg">
+                Completá la plantilla en Excel, LibreOffice o Google Sheets y luego subila en el paso 2.
+                La columna <code>imagen</code> puede ser el nombre de un archivo dentro del ZIP del paso 3
+                (ej. <code>JW-BLACK-750.jpg</code>) o una URL <code>https://...</code>. Si la dejás vacía,
+                se busca automáticamente una imagen con el mismo nombre que el <code>codigo</code>.
+            </p>
+            <div class="admin-importar-acciones-plantilla">
+                <button type="button" id="btnDescargarPlantillaCsv" class="admin-boton-secundario">
+                    <i class="fa-solid fa-file-csv" aria-hidden="true"></i>
+                    Descargar plantilla CSV
+                </button>
+                <button type="button" id="btnDescargarPlantillaXlsx" class="admin-boton-secundario">
+                    <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                    Descargar plantilla Excel
+                </button>
+            </div>
+        </section>
+
+        <!-- Paso 2 -->
+        <section class="admin-panel-inline">
+            <h2 class="admin-panel-titulo">Paso 2 · Seleccionar productos</h2>
+
+            <div id="dzProductos" class="admin-dropzone" tabindex="0" role="button"
+                aria-label="Seleccionar archivo de productos CSV o Excel">
+                <i class="fa-solid fa-file-arrow-up" aria-hidden="true"></i>
+                <p><strong>Arrastrá tu archivo aquí</strong> o hacé clic para elegirlo</p>
+                <p class="admin-dropzone-hint">.csv o .xlsx — máximo 10 MB, 2000 filas</p>
+                <input id="inputProductos" type="file" accept=".csv,.xlsx" class="admin-input-file-oculto">
+            </div>
+            <p id="estadoArchivoProductos" class="admin-archivo-nombre"></p>
+        </section>
+
+        <!-- Paso 3 -->
+        <section class="admin-panel-inline">
+            <h2 class="admin-panel-titulo">Paso 3 · Seleccionar imágenes <span class="admin-opcional">(opcional)</span></h2>
+
+            <div id="dzImagenes" class="admin-dropzone" tabindex="0" role="button" aria-label="Seleccionar ZIP de imágenes">
+                <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
+                <p><strong>Arrastrá tu ZIP aquí</strong> o hacé clic para elegirlo</p>
+                <p class="admin-dropzone-hint">.zip — máximo 60 MB, 1000 archivos</p>
+                <input id="inputImagenes" type="file" accept=".zip" class="admin-input-file-oculto">
+            </div>
+            <p id="estadoArchivoImagenes" class="admin-archivo-nombre"></p>
+        </section>
+
+        <!-- Duplicados -->
+        <section class="admin-panel-inline">
+            <h2 class="admin-panel-titulo">Productos existentes (por código)</h2>
+            <div class="admin-radio-grupo">
+                <label class="admin-radio">
+                    <input type="radio" name="modoDuplicados" value="crear" checked>
+                    <span>Solo crear productos nuevos</span>
+                </label>
+                <label class="admin-radio">
+                    <input type="radio" name="modoDuplicados" value="actualizar">
+                    <span>Crear nuevos y actualizar existentes</span>
+                </label>
+            </div>
+            <p class="admin-ayuda">
+                Un producto se considera existente cuando su <code>codigo</code> ya está en la base de datos.
+                Filas sin código nunca actualizan un producto existente: siempre se crean como nuevos.
+            </p>
+        </section>
+
+        <div class="admin-importar-acciones-validar">
+            <button type="button" id="btnValidarArchivo" class="admin-boton-primario" disabled>
+                <i class="fa-solid fa-magnifying-glass-chart" aria-hidden="true"></i>
+                Validar archivo
+            </button>
+            <span id="estadoValidando" class="admin-archivo-nombre" hidden>Analizando archivo…</span>
+        </div>
+
+        <!-- Resumen + preview -->
+        <section id="seccionResumen" class="admin-panel-inline" hidden>
+            <h2 class="admin-panel-titulo">Resumen antes de importar</h2>
+            <p id="resumenArchivo" class="admin-ayuda"></p>
+
+            <div class="admin-resumen-contadores">
+                <div class="admin-resumen-item admin-resumen-valido"><strong id="contValidas">0</strong><span>válidas</span></div>
+                <div class="admin-resumen-item admin-resumen-advertencia"><strong id="contAdvertencias">0</strong><span>con advertencias</span></div>
+                <div class="admin-resumen-item admin-resumen-error"><strong id="contErrores">0</strong><span>con errores</span></div>
+                <div class="admin-resumen-item admin-resumen-existente"><strong id="contExistentes">0</strong><span>ya existentes</span></div>
+            </div>
+
+            <div id="categoriasNoEncontradas" class="admin-mensaje-error" hidden></div>
+
+            <div class="admin-tabla-scroll">
+                <table class="admin-tabla-preview">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Imagen</th>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoTablaPreview"></tbody>
+                </table>
+            </div>
+
+            <div class="admin-form-acciones">
+                <button type="button" id="btnImportar" class="admin-boton-primario">
+                    <i class="fa-solid fa-upload" aria-hidden="true"></i>
+                    <span id="textoBtnImportar">Importar productos</span>
+                </button>
+                <button type="button" id="btnCancelarImportacion" class="admin-boton-secundario">Cancelar</button>
+            </div>
+            <p id="estadoImportando" class="admin-archivo-nombre" hidden>Importando productos…</p>
+        </section>
+
+        <!-- Resultado final -->
+        <section id="seccionResultado" class="admin-panel-inline" hidden>
+            <h2 class="admin-panel-titulo">Importación completada</h2>
+
+            <div class="admin-resumen-contadores">
+                <div class="admin-resumen-item"><strong id="resProcesados">0</strong><span>procesados</span></div>
+                <div class="admin-resumen-item admin-resumen-valido"><strong id="resCreados">0</strong><span>creados</span></div>
+                <div class="admin-resumen-item admin-resumen-advertencia"><strong id="resActualizados">0</strong><span>actualizados</span></div>
+                <div class="admin-resumen-item admin-resumen-existente"><strong id="resOmitidos">0</strong><span>omitidos</span></div>
+                <div class="admin-resumen-item admin-resumen-error"><strong id="resErrores">0</strong><span>errores</span></div>
+                <div class="admin-resumen-item admin-resumen-valido"><strong id="resImgOk">0</strong><span>imágenes cargadas</span></div>
+                <div class="admin-resumen-item admin-resumen-error"><strong id="resImgError">0</strong><span>imágenes fallidas</span></div>
+            </div>
+
+            <div id="bloqueErroresResultado" hidden>
+                <h3 class="admin-form-seccion">Errores</h3>
+                <div class="admin-tabla-scroll">
+                    <table class="admin-tabla-preview">
+                        <thead><tr><th>Fila</th><th>Código</th><th>Error</th></tr></thead>
+                        <tbody id="cuerpoTablaErrores"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="btnDescargarErrores" class="admin-boton-secundario">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    Descargar reporte de errores CSV
+                </button>
+            </div>
+
+            <div class="admin-form-acciones">
+                <a href="productos.html" class="admin-boton-primario">Ver productos</a>
+                <button type="button" id="btnImportarOtro" class="admin-boton-secundario">Importar otro archivo</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="js/config/supabase-client.js"></script>
+    <script src="js/admin/auth-guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/admin/admin-chrome.js"></script>
+    <script src="js/admin/storage.js"></script>
+    <script src="js/admin/productos-importar.js"></script>
+</body>
+
+</html>

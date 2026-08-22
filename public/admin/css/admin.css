@@ -621,6 +621,238 @@
    RESPONSIVE
 ========================== */
 
+/* ==========================
+   IMPORTAR PRODUCTOS
+========================== */
+
+.admin-encabezado-acciones {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-opcional {
+    color: var(--color-text-light);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: var(--fs-tiny);
+}
+
+.admin-ayuda-lg {
+    font-size: var(--fs-body-sm);
+    line-height: 1.55;
+    margin-bottom: 18px;
+}
+
+.admin-ayuda-lg code {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--color-primary);
+    font-size: .92em;
+}
+
+.admin-importar-acciones-plantilla,
+.admin-importar-acciones-validar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-importar-acciones-validar {
+    margin: 22px 0 28px;
+}
+
+.admin-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    padding: 32px 20px;
+    border: 2px dashed var(--color-border);
+    border-radius: 14px;
+    background: var(--color-bg);
+    color: var(--color-text-light);
+    cursor: pointer;
+    transition: border-color .2s ease, background-color .2s ease;
+}
+
+.admin-dropzone:hover,
+.admin-dropzone:focus-visible,
+.admin-dropzone.admin-dropzone-activa {
+    border-color: var(--color-primary);
+    background: rgba(247, 148, 29, .08);
+    outline: 0;
+}
+
+.admin-dropzone i {
+    font-size: var(--fs-h2);
+    color: var(--color-primary);
+    margin-bottom: 6px;
+}
+
+.admin-dropzone p {
+    margin: 0;
+    font-size: var(--fs-body-sm);
+}
+
+.admin-dropzone-hint {
+    font-size: var(--fs-tiny) !important;
+}
+
+.admin-radio-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.admin-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: var(--fs-body-sm);
+}
+
+.admin-radio input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+}
+
+.admin-resumen-contadores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 4px 0 20px;
+}
+
+.admin-resumen-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 96px;
+    padding: 12px 16px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.admin-resumen-item strong {
+    font-size: var(--fs-h3);
+}
+
+.admin-resumen-item span {
+    font-size: var(--fs-tiny);
+    color: var(--color-text-light);
+}
+
+.admin-resumen-valido strong { color: var(--color-success); }
+.admin-resumen-advertencia strong { color: var(--color-primary); }
+.admin-resumen-error strong { color: #ef6c66; }
+.admin-resumen-existente strong { color: var(--color-text-light); }
+
+.admin-tabla-scroll {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 18px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+}
+
+.admin-tabla-preview {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+    font-size: var(--fs-small);
+}
+
+.admin-tabla-preview th,
+.admin-tabla-preview td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
+}
+
+.admin-tabla-preview th {
+    background: var(--color-bg);
+    color: var(--color-text-light);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.admin-tabla-preview tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.admin-tabla-preview img.admin-preview-miniatura {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--color-bg);
+    vertical-align: middle;
+}
+
+.admin-fila-mensajes {
+    white-space: normal;
+    max-width: 320px;
+    color: var(--color-text-light);
+    font-size: var(--fs-tiny);
+}
+
+.admin-badge-estado-fila {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: var(--fs-badge);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-badge-estado-fila.valido {
+    background: rgba(37, 211, 102, .16);
+    color: var(--color-success);
+}
+
+.admin-badge-estado-fila.advertencia {
+    background: rgba(247, 148, 29, .16);
+    color: var(--color-primary);
+}
+
+.admin-badge-estado-fila.error {
+    background: rgba(239, 108, 102, .16);
+    color: #ef6c66;
+}
+
+.admin-badge-estado-fila.existente {
+    background: rgba(182, 170, 163, .16);
+    color: var(--color-text-light);
+}
+
+@media (max-width: 767.98px) {
+    .admin-encabezado-acciones {
+        width: 100%;
+    }
+
+    .admin-encabezado-acciones a {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
 @media (max-width: 767.98px) {
     .admin-topbar {
         justify-content: center;

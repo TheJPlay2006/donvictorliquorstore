@@ -1,0 +1,6 @@
+nombre,marca,presentacion,codigo,descripcion,categoria,precio,stock,disponibilidad,destacado,promocion,activo,imagen
+Johnnie Walker Black Label,Johnnie Walker,750 ml,JW-BLACK-750,"Whisky escocés, 12 años, notas ahumadas",Whisky y bourbon,18500,12,disponible,true,false,true,JW-BLACK-750.jpg
+Absolut Vodka,Absolut,750 ml,ABS-750,Vodka sueco triple destilado,Vodka,9200,20,disponible,false,false,true,ABS-750.png
+Baileys Original,Baileys,750 ml,BAI-750,Crema irlandesa con whisky y chocolate,"Licores, cremas y aperitivos",12500,8,disponible,Sí,1,TRUE,
+Cerveza Corona Six Pack,Corona,Paquete de 6 botellas,COR-6PACK,Cerveza lager de origen mexicano,Cervezas,5400,30,disponible,no,0,si,
+Ron Centenario Reserva 12,Centenario,750 ml,CEN-RES-12,Ron añejado en barricas de roble,Ron,19800,6,agotado,false,false,true,
