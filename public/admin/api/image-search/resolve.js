@@ -19,7 +19,7 @@ const MAX_ITEMS_POR_LLAMADA = 60;
 
 function limitarConcurrencia() {
     const cruda = Number(process.env.IMAGE_SEARCH_CONCURRENCY);
-    return Math.max(1, Math.min(Number.isFinite(cruda) ? cruda : 4, 8));
+    return Math.max(1, Math.min(Number.isFinite(cruda) ? cruda : 3, 8));
 }
 
 function limitePorImportacion() {
@@ -79,11 +79,17 @@ module.exports = async function handler(req, res) {
     });
 
     let procesados = 0;
+    // Compartido entre todos los items de esta llamada: si un proveedor
+    // acumula MAX_FALLOS_CONSECUTIVOS fallos dentro de este mismo lote, se
+    // deja de consultar por el resto del lote (§43 — evita, por ejemplo,
+    // 53 timeouts idénticos si un proveedor está caído).
+    const estadoCircuito = {};
 
     await procesarConConcurrencia(itemsAProcesar, limitarConcurrencia(), async (item) => {
         const resultado = await resolverImagenProducto(sesion.cliente, item, {
             forzar: !!body.forzar,
-            consultaPersonalizada: items.length === 1 ? body.consultaPersonalizada : null
+            consultaPersonalizada: items.length === 1 ? body.consultaPersonalizada : null,
+            estadoCircuito: estadoCircuito
         });
         return resultado;
     }, (item, resultado) => {

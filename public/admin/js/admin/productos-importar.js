@@ -31,7 +31,7 @@
     };
 
     var CAMPOS_ESPERADOS = [
-        "nombre", "marca", "presentacion", "codigo", "descripcion", "categoria",
+        "nombre", "marca", "presentacion", "codigo", "barcode", "descripcion", "categoria",
         "precio", "stock", "disponibilidad", "destacado", "promocion", "activo", "imagen"
     ];
 
@@ -52,7 +52,11 @@
 
     // Búsqueda automática de imágenes (backend, ver api/image-search/*.js).
     var ITEMS_POR_LLAMADA_BUSQUEDA = 40;
-    var configuracionBusqueda = { enabled: false, provider: null, maxPerImport: 300, concurrency: 4 };
+    var configuracionBusqueda = { enabled: false, providers: [], paidProviderActive: false, maxPerImport: 300, concurrency: 3 };
+    var NOMBRE_LEGIBLE_FUENTE = {
+        openfoodfacts: "Open Food Facts", wikimedia: "Wikimedia Commons",
+        openverse: "Openverse", exa: "Exa", zip: "ZIP", url: "URL"
+    };
     var buscandoImagenes = false;
     var indiceDialogoActual = null;
 
@@ -88,12 +92,17 @@
         if (configuracionBusqueda.enabled) {
             checkbox.checked = true;
             checkbox.disabled = false;
-            estado.textContent = "Proveedor: " + configuracionBusqueda.provider + " · hasta " +
+            var nombresFuentes = (configuracionBusqueda.providers || []).map(function (p) {
+                return NOMBRE_LEGIBLE_FUENTE[p] || p;
+            });
+            if (configuracionBusqueda.paidProviderActive) { nombresFuentes.push("Exa"); }
+            estado.textContent = "✓ Búsqueda automática disponible (fuentes gratuitas: " +
+                (nombresFuentes.length ? nombresFuentes.join(", ") : "ninguna") + ") · hasta " +
                 configuracionBusqueda.maxPerImport + " búsquedas por importación.";
         } else {
             checkbox.checked = false;
             checkbox.disabled = true;
-            estado.textContent = "La búsqueda automática no está configurada todavía (falta un proveedor de imágenes). Podés seguir usando el ZIP.";
+            estado.textContent = "La búsqueda automática está apagada (IMAGE_SEARCH_ENABLED=false). Podés seguir usando el ZIP.";
         }
     }
 
@@ -650,6 +659,11 @@
                 candidatos: datos.candidatos || [],
                 confianza: datos.confianza,
                 searchQuery: datos.searchQuery,
+                fuente: datos.ganador.fuente || null,
+                licencia: datos.ganador.license || null,
+                licenciaUrl: datos.ganador.licenseUrl || null,
+                autor: datos.ganador.author || null,
+                sourceUrlGanador: datos.ganador.sourceUrl || null,
                 autoSeleccionado: true
             };
             if (datos.estado === "revisar") {
@@ -1031,6 +1045,15 @@
             }
         }
 
+        var fuenteTexto = "—";
+        if (fila.resolucionImagen.tipo === "busqueda") {
+            fuenteTexto = NOMBRE_LEGIBLE_FUENTE[fila.resolucionImagen.fuente] || fila.resolucionImagen.fuente || "?";
+        } else if (fila.resolucionImagen.tipo === "zip") {
+            fuenteTexto = "ZIP";
+        } else if (fila.resolucionImagen.tipo === "url") {
+            fuenteTexto = "URL";
+        }
+
         tr.innerHTML =
             "<td>" + (indice + 1) + "</td>" +
             '<td class="admin-preview-celda-imagen">' + imagenHtml + accionesImagen + "</td>" +
@@ -1039,6 +1062,7 @@
             "<td>" + escaparTexto(fila.categoriaNombre || "—") + "</td>" +
             "<td>" + (fila.precio != null ? "₡" + fila.precio.toLocaleString("es-CR") : "—") + "</td>" +
             "<td>" + (fila.stock != null ? fila.stock : "—") + "</td>" +
+            "<td>" + escaparTexto(fuenteTexto) + "</td>" +
             '<td><span class="admin-badge-estado-fila ' + estado + '">' + textoEstado + "</span>" +
             (mensajes.length ? '<div class="admin-fila-mensajes">' + mensajes.map(escaparTexto).join("<br>") + "</div>" : "") +
             "</td>";
@@ -1355,6 +1379,10 @@
         if (!respuesta.error) {
             if (modo === "insert") { contadores.creados += filas.length; }
             else { contadores.actualizados += filas.length; }
+
+            (respuesta.data || []).forEach(function (fila_db, i) {
+                guardarAtribucionSiCorresponde(fila_db.id_producto, filas[i]);
+            });
             return;
         }
 
@@ -1390,8 +1418,36 @@
                     fila.imagenExistente !== fila._imagenResuelta && typeof window.eliminarImagenAdminSiEsDeStorage === "function") {
                     await window.eliminarImagenAdminSiEsDeStorage(fila.imagenExistente).catch(function () {});
                 }
+
+                var idProducto = respuestaFila.data && respuestaFila.data[0] && respuestaFila.data[0].id_producto;
+                if (idProducto) { guardarAtribucionSiCorresponde(idProducto, fila); }
             }
         }
+    }
+
+    // §35/§36/§38: guarda fuente/licencia/autor de una imagen encontrada por
+    // búsqueda automática, sin tocar la tabla `productos`. Best-effort: si
+    // falla, no debe afectar el resultado de la importación (el producto ya
+    // se creó/actualizó bien).
+    function guardarAtribucionSiCorresponde(idProducto, fila) {
+        var resolucion = fila.resolucionImagen;
+        if (!resolucion || resolucion.tipo !== "busqueda" || !resolucion.fuente) { return; }
+
+        window.supabaseClient
+            .from("producto_imagen_atribucion")
+            .upsert({
+                id_producto: idProducto,
+                fuente: resolucion.fuente,
+                fuente_url: resolucion.sourceUrlGanador || null,
+                licencia: resolucion.licencia || null,
+                licencia_url: resolucion.licenciaUrl || null,
+                autor: resolucion.autor || null
+            }, { onConflict: "id_producto" })
+            .then(function (respuesta) {
+                if (respuesta.error) {
+                    console.error("[PRODUCT_IMPORT] no se pudo guardar la atribución de imagen", respuesta.error.message);
+                }
+            });
     }
 
     // ---------------------------------------------------------------------
@@ -1489,10 +1545,13 @@
 
         candidatos.forEach(function (candidato) {
             var celda = document.createElement("div");
-            celda.className = "admin-candidato" + (candidato.url === urlSeleccionadaActual ? " seleccionado" : "");
+            var esSeleccionado = candidato.url === urlSeleccionadaActual;
+            celda.className = "admin-candidato" + (esSeleccionado ? " seleccionado" : "");
+            var fuente = NOMBRE_LEGIBLE_FUENTE[candidato.fuente] || candidato.sourceDomain || "";
             celda.innerHTML =
-                '<img src="' + escaparAtributo(candidato.url) + '" alt="" loading="lazy" onerror="this.style.opacity=\'.3\'">' +
-                "<span>" + escaparTexto(candidato.sourceDomain || "") + " · " + Math.round(candidato.score || 0) + "</span>";
+                '<img src="' + escaparAtributo(candidato.thumbnail || candidato.url) + '" alt="" loading="lazy" onerror="this.style.opacity=\'.3\'">' +
+                "<span>" + Math.round(candidato.score || 0) + "% " + (esSeleccionado ? "✓" : "") + "</span>" +
+                "<span>" + escaparTexto(fuente) + "</span>";
             celda.addEventListener("click", function () {
                 seleccionarCandidato(candidato, candidatos);
             });
@@ -1510,6 +1569,11 @@
             candidatos: todosLosCandidatos,
             confianza: candidato.confianza || "media",
             searchQuery: document.getElementById("dialogCandidatosQuery").value,
+            fuente: candidato.fuente || null,
+            licencia: candidato.license || null,
+            licenciaUrl: candidato.licenseUrl || null,
+            autor: candidato.author || null,
+            sourceUrlGanador: candidato.sourceUrl || null,
             autoSeleccionado: false
         };
 

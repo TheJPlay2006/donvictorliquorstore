@@ -9,6 +9,9 @@ const { construirConsulta, construirClaveCache } = require("./consulta");
 const { calcularScore, confianzaDeScore, evaluarCandidatos } = require("./scoring");
 const { esIpPrivadaOEspecial, verificarFirmaImagen } = require("./ssrfFetch");
 const { procesarConConcurrencia, conReintentos } = require("./concurrencia");
+const { validarBarcode } = require("./barcode");
+const { normalizarTexto, presentacionAMililitros, generarVariantesConsulta, nombreCompleto } = require("./texto");
+const { licenciaPermiteUsoComercialYDerivados } = require("./providers/openverse");
 
 let total = 0;
 let fallidos = 0;
@@ -115,12 +118,111 @@ test("calcularScore penaliza títulos que sugieren banner/gente/logo", function 
     assert.ok(scoreBanner < scoreNormal, "el banner con gente debería puntuar menos: " + scoreBanner + " vs " + scoreNormal);
 });
 
-test("confianzaDeScore: umbrales alta/media/baja", function () {
+test("calcularScore: fuente Open Food Facts arranca con el bono de barcode exacto", function () {
+    const candidato = { fuente: "openfoodfacts", title: "Johnnie Walker Black Label", offBrand: "Johnnie Walker", offQuantity: "750 ml" };
+    const resultado = calcularScore(candidato, TERMINOS_JW);
+    assert.ok(resultado.score >= 80, "score esperado alto por barcode, fue " + resultado.score);
+});
+
+test("calcularScore: Open Food Facts con marca claramente distinta se penaliza (§7)", function () {
+    const candidatoCoincide = { fuente: "openfoodfacts", title: "x", offBrand: "Johnnie Walker", offQuantity: "750 ml" };
+    const candidatoDistinto = { fuente: "openfoodfacts", title: "x", offBrand: "Coca-Cola", offQuantity: "750 ml" };
+    const scoreCoincide = calcularScore(candidatoCoincide, TERMINOS_JW).score;
+    const scoreDistinto = calcularScore(candidatoDistinto, TERMINOS_JW).score;
+    assert.ok(scoreDistinto < scoreCoincide, "una marca de OFF distinta a la esperada debería bajar el score");
+});
+
+test("calcularScore: no confunde Black Label con Red Label (§21)", function () {
+    const candidatoCorrecto = { title: "Johnnie Walker Black Label bottle", sourceDomain: "totalwine.com" };
+    const candidatoEquivocado = { title: "Johnnie Walker Red Label bottle", sourceDomain: "totalwine.com" };
+    const scoreCorrecto = calcularScore(candidatoCorrecto, TERMINOS_JW).score;
+    const scoreEquivocado = calcularScore(candidatoEquivocado, TERMINOS_JW).score;
+    assert.ok(scoreEquivocado < scoreCorrecto, "Red Label no debería puntuar igual que Black Label cuando se pidió Black Label");
+    assert.notStrictEqual(confianzaDeScore(scoreEquivocado), "alta");
+});
+
+test("calcularScore: no confunde Don Julio Blanco con Reposado (§21)", function () {
+    const terminos = { marca: "Don Julio", nombre: "Don Julio Blanco", presentacion: "750 ml" };
+    const correcto = calcularScore({ title: "Don Julio Blanco tequila bottle", sourceDomain: "totalwine.com" }, terminos).score;
+    const equivocado = calcularScore({ title: "Don Julio Reposado tequila bottle", sourceDomain: "totalwine.com" }, terminos).score;
+    assert.ok(equivocado < correcto);
+});
+
+test("calcularScore: premia buena resolución y proporción de botella, penaliza imágenes diminutas", function () {
+    const base = { title: "Johnnie Walker Black Label 750 ml bottle", sourceDomain: "totalwine.com" };
+    const grande = calcularScore(Object.assign({ width: 1200, height: 1600 }, base), TERMINOS_JW).score;
+    const chica = calcularScore(Object.assign({ width: 120, height: 160 }, base), TERMINOS_JW).score;
+    assert.ok(grande > chica, "una imagen de 1200x1600 debería puntuar más que una de 120x160");
+});
+
+test("calcularScore: presentación distinta (700ml pedido, 750ml encontrado) penaliza", function () {
+    const terminos = { marca: "Absolut", nombre: "Absolut Vodka", presentacion: "700 ml" };
+    const coincide = calcularScore({ title: "Absolut Vodka 700 ml bottle", sourceDomain: "wine.com" }, terminos).score;
+    const distinta = calcularScore({ title: "Absolut Vodka 750 ml bottle", sourceDomain: "wine.com" }, terminos).score;
+    assert.ok(distinta < coincide);
+});
+
+test("confianzaDeScore: umbrales alta (>=80) / media (>=55) / baja (<55)", function () {
+    assert.strictEqual(confianzaDeScore(100), "alta");
     assert.strictEqual(confianzaDeScore(80), "alta");
-    assert.strictEqual(confianzaDeScore(65), "alta");
-    assert.strictEqual(confianzaDeScore(50), "media");
-    assert.strictEqual(confianzaDeScore(35), "media");
+    assert.strictEqual(confianzaDeScore(79), "media");
+    assert.strictEqual(confianzaDeScore(55), "media");
+    assert.strictEqual(confianzaDeScore(54), "baja");
     assert.strictEqual(confianzaDeScore(10), "baja");
+});
+
+// ---- barcode (§5: validación GS1 real, `codigo` interno nunca es barcode) ----
+test("validarBarcode acepta EAN-13 reales (dígito de control válido)", function () {
+    assert.strictEqual(validarBarcode("3017620422003"), "3017620422003"); // Nutella, verificado en vivo
+    assert.strictEqual(validarBarcode("5449000000996"), "5449000000996"); // Coca-Cola, verificado en vivo
+});
+
+test("validarBarcode rechaza el codigo interno de la tienda", function () {
+    assert.strictEqual(validarBarcode("JW-BLACK-750"), null);
+});
+
+test("validarBarcode rechaza números con longitud no estándar o dígito de control inválido", function () {
+    assert.strictEqual(validarBarcode("123456789012345"), null); // 15 dígitos, ninguna longitud GS1 válida
+    assert.strictEqual(validarBarcode("1234567890123"), null); // 13 dígitos pero check digit incorrecto
+    assert.strictEqual(validarBarcode(""), null);
+    assert.strictEqual(validarBarcode(null), null);
+});
+
+// ---- texto.js: normalización y variantes de consulta (§13/§14/§16) ----
+test("normalizarTexto hace que apóstrofes/tildes no importen para comparar", function () {
+    assert.strictEqual(normalizarTexto("Buchanan's Deluxe 12 Años"), normalizarTexto("Buchanans Deluxe 12 anos"));
+    assert.strictEqual(normalizarTexto("Jack Daniel's"), "jack daniels");
+});
+
+test("presentacionAMililitros reconoce 750ml == 750 ml y 1L == 1000ml", function () {
+    assert.strictEqual(presentacionAMililitros("750 ml"), 750);
+    assert.strictEqual(presentacionAMililitros("750ml"), 750);
+    assert.strictEqual(presentacionAMililitros("1 L"), 1000);
+    assert.strictEqual(presentacionAMililitros("1l"), 1000);
+    assert.strictEqual(presentacionAMililitros("0.75L"), 750);
+});
+
+test("generarVariantesConsulta no duplica la marca cuando el nombre ya la incluye", function () {
+    assert.strictEqual(nombreCompleto({ marca: "Johnnie Walker", nombre: "Johnnie Walker Black Label" }), "Johnnie Walker Black Label");
+});
+
+test("generarVariantesConsulta produce como máximo 3 variantes sin duplicados", function () {
+    const variantes = generarVariantesConsulta({ marca: "Johnnie Walker", nombre: "Johnnie Walker Black Label", presentacion: "750 ml", categoria: "Whisky y bourbon" });
+    assert.ok(variantes.length <= 3);
+    assert.strictEqual(new Set(variantes.map(normalizarTexto)).size, variantes.length);
+    assert.ok(variantes[0].toLowerCase().indexOf("750 ml") !== -1);
+});
+
+// ---- Openverse: filtro de licencias (§11/§37) ----
+test("licenciaPermiteUsoComercialYDerivados acepta CC0/PDM/BY/BY-SA y rechaza NC/ND/null", function () {
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("cc0"), true);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("by"), true);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("by-sa"), true);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("by-nc"), false);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("by-nc-sa"), false);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados("by-nd"), false);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados(null), false);
+    assert.strictEqual(licenciaPermiteUsoComercialYDerivados(undefined), false);
 });
 
 test("evaluarCandidatos ordena de mayor a menor score", function () {
@@ -165,6 +267,66 @@ test("verificarFirmaImagen acepta JPEG/PNG/WEBP reales y rechaza contenido falso
     const html = Buffer.from("<html>no soy una imagen</html>");
     assert.strictEqual(verificarFirmaImagen(html, "image/jpeg"), false);
 });
+
+// ---- SSRF: descargarImagenSegura sigue redirects pero re-valida cada salto ----
+async function testDescargaSSRF() {
+    const { descargarImagenSegura } = require("./ssrfFetch");
+    const dns = require("node:dns").promises;
+    const fetchOriginal = global.fetch;
+    const dnsLookupOriginal = dns.lookup;
+
+    // Se mockea el DNS para que el test no dependa de Internet (§53): un
+    // hostname que ya es una IP literal "resuelve" a sí mismo (igual que el
+    // dns.lookup real de Node), y cualquier otro hostname resuelve a una IP
+    // pública falsa — así se prueba la re-validación de redirects sin hacer
+    // ninguna consulta real.
+    dns.lookup = async (host) => {
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) { return [{ address: host, family: 4 }]; }
+        return [{ address: "93.184.216.34", family: 4 }];
+    };
+
+    await testAsync("descargarImagenSegura rechaza un redirect hacia una IP privada/metadata (§32)", async function () {
+        global.fetch = async (url) => {
+            const urlTexto = String(url);
+            if (urlTexto === "https://example.com/imagen.jpg") {
+                return {
+                    status: 302,
+                    headers: { get: (nombre) => (nombre === "location" ? "http://169.254.169.254/secreto.jpg" : null) }
+                };
+            }
+            throw new Error("no debería llegar a pedir " + urlTexto);
+        };
+
+        try {
+            await descargarImagenSegura("https://example.com/imagen.jpg");
+            assert.fail("debería haber rechazado el redirect hacia metadata cloud");
+        } catch (error) {
+            assert.ok(error.message.length > 0);
+        }
+    });
+
+    await testAsync("descargarImagenSegura corta después de demasiadas redirecciones", async function () {
+        let llamadas = 0;
+        global.fetch = async () => {
+            llamadas++;
+            return {
+                status: 302,
+                headers: { get: (nombre) => (nombre === "location" ? "https://example.com/otra-" + llamadas + ".jpg" : null) }
+            };
+        };
+
+        try {
+            await descargarImagenSegura("https://example.com/imagen.jpg");
+            assert.fail("debería haber rechazado por exceso de redirecciones");
+        } catch (error) {
+            assert.ok(/redirec/i.test(error.message), "mensaje inesperado: " + error.message);
+        }
+        assert.ok(llamadas <= 5, "no debería seguir redirects indefinidamente, llamadas=" + llamadas);
+    });
+
+    global.fetch = fetchOriginal;
+    dns.lookup = dnsLookupOriginal;
+}
 
 // ---- concurrencia ----
 async function testConcurrencia() {
@@ -233,7 +395,7 @@ async function testConcurrencia() {
     });
 }
 
-// ---- resolverImagenProducto (integración con proveedor/cache falsos) ----
+// ---- resolverImagenProducto (integración con proveedores/cache falsos) ----
 function crearClienteSupabaseFalso(cacheInicial) {
     const almacen = new Map(Object.entries(cacheInicial || {}));
     return {
@@ -244,11 +406,15 @@ function crearClienteSupabaseFalso(cacheInicial) {
                     return {
                         eq: function (_columna, valor) {
                             return {
-                                maybeSingle: async function () {
-                                    if (almacen.has(valor)) {
-                                        return { data: { candidatos: almacen.get(valor) }, error: null };
-                                    }
-                                    return { data: null, error: null };
+                                gt: function () {
+                                    return {
+                                        maybeSingle: async function () {
+                                            if (almacen.has(valor)) {
+                                                return { data: { candidatos: almacen.get(valor) }, error: null };
+                                            }
+                                            return { data: null, error: null };
+                                        }
+                                    };
                                 }
                             };
                         }
@@ -264,7 +430,23 @@ function crearClienteSupabaseFalso(cacheInicial) {
     };
 }
 
-function crearProveedorFalso(comportamiento) {
+// Proveedor falso "de barcode" (como openfoodfacts): una sola llamada por
+// resolución, no itera variantes.
+function crearProveedorBarcodeFalso(comportamiento) {
+    let llamadas = 0;
+    return {
+        estaConfigurado: () => true,
+        buscarPorBarcode: async function (barcode) {
+            llamadas++;
+            return comportamiento(barcode, llamadas);
+        },
+        _llamadas: () => llamadas
+    };
+}
+
+// Proveedor falso "de texto" (como wikimedia/openverse): se llama una vez
+// por cada variante de consulta que el resolver intente.
+function crearProveedorTextoFalso(comportamiento) {
     let llamadas = 0;
     return {
         estaConfigurado: () => true,
@@ -272,71 +454,82 @@ function crearProveedorFalso(comportamiento) {
             llamadas++;
             return comportamiento(query, llamadas);
         },
-        ErrorProveedorSinCredito: class ErrorProveedorSinCredito extends Error {},
         _llamadas: () => llamadas
     };
+}
+
+function proveedorVacio() {
+    return crearProveedorTextoFalso(() => []);
 }
 
 async function testResolver() {
     const { resolverImagenProducto } = require("./resolver");
 
-    await testAsync("resolverImagenProducto: candidato de alta confianza queda 'encontrada'", async function () {
-        const proveedor = crearProveedorFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+    await testAsync("resolverImagenProducto: candidato de alta confianza (Wikimedia) queda 'encontrada'", async function () {
+        const wikimedia = crearProveedorTextoFalso(() => [
+            { url: "https://x.com/a.jpg", sourceUrl: "https://commons.wikimedia.org/wiki/File:x.jpg", sourceDomain: "commons.wikimedia.org", title: "Johnnie Walker Black Label 750ml bottle" }
         ]);
         const cliente = crearClienteSupabaseFalso();
-        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
         assert.strictEqual(resultado.estado, "encontrada");
         assert.strictEqual(resultado.confianza, "alta");
         assert.ok(resultado.ganador);
     });
 
     await testAsync("resolverImagenProducto: candidato de confianza media queda 'revisar'", async function () {
-        const proveedor = crearProveedorFalso(() => [
+        const wikimedia = crearProveedorTextoFalso(() => [
             { url: "https://x.com/a.jpg", sourceUrl: "https://example.com/algo", sourceDomain: "example.com", title: "Johnnie Walker whisky article" }
         ]);
         const cliente = crearClienteSupabaseFalso();
-        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
         assert.strictEqual(resultado.estado, "revisar");
         assert.strictEqual(resultado.confianza, "media");
     });
 
     await testAsync("resolverImagenProducto: sin candidatos relevantes queda 'sin_resultado' y no auto-selecciona", async function () {
-        const proveedor = crearProveedorFalso(() => [
+        const wikimedia = crearProveedorTextoFalso(() => [
             { url: "https://pinterest.com/a.jpg", sourceUrl: "https://pinterest.com/pin/1", sourceDomain: "pinterest.com", title: "party photos" }
         ]);
         const cliente = crearClienteSupabaseFalso();
-        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
         assert.strictEqual(resultado.estado, "sin_resultado");
         assert.strictEqual(resultado.ganador, null);
     });
 
-    await testAsync("resolverImagenProducto: usa el cache y NO vuelve a llamar al proveedor", async function () {
-        const proveedor = crearProveedorFalso(() => [
+    await testAsync("resolverImagenProducto: usa el cache y NO vuelve a llamar a los proveedores", async function () {
+        const wikimedia = crearProveedorTextoFalso(() => [
             { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }
         ]);
         const cliente = crearClienteSupabaseFalso();
+        const proveedores = { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() };
 
-        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
-        assert.strictEqual(proveedor._llamadas(), 1);
+        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedores: proveedores });
+        assert.strictEqual(wikimedia._llamadas(), 1);
 
-        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
-        assert.strictEqual(proveedor._llamadas(), 1, "no debería haber llamado al proveedor una segunda vez (cache hit)");
+        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedores: proveedores });
+        assert.strictEqual(wikimedia._llamadas(), 1, "no debería haber llamado al proveedor una segunda vez (cache hit)");
     });
 
     await testAsync("resolverImagenProducto: 'forzar' ignora el cache y vuelve a buscar", async function () {
-        const proveedor = crearProveedorFalso(() => [
+        const wikimedia = crearProveedorTextoFalso(() => [
             { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }
         ]);
         const cliente = crearClienteSupabaseFalso();
+        const proveedores = { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() };
 
-        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
-        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor, forzar: true });
-        assert.strictEqual(proveedor._llamadas(), 2);
+        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedores: proveedores });
+        await resolverImagenProducto(cliente, TERMINOS_JW, { proveedores: proveedores, forzar: true });
+        assert.ok(wikimedia._llamadas() >= 2);
     });
 
     await testAsync("resolverImagenProducto: reintenta un 429 y termina resolviendo bien", async function () {
-        const proveedor = crearProveedorFalso((query, llamada) => {
+        const wikimedia = crearProveedorTextoFalso((query, llamada) => {
             if (llamada === 1) {
                 const error = new Error("rate limit");
                 error.retryAfterMs = 1;
@@ -345,28 +538,93 @@ async function testResolver() {
             return [{ url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }];
         });
         const cliente = crearClienteSupabaseFalso();
-        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
         assert.strictEqual(resultado.estado, "encontrada");
-        assert.strictEqual(proveedor._llamadas(), 2);
+        assert.strictEqual(wikimedia._llamadas(), 2);
     });
 
-    await testAsync("resolverImagenProducto: 402 (sin crédito) no reintenta y devuelve error_proveedor", async function () {
-        class ErrorSinCredito extends Error {}
-        const proveedor = {
+    await testAsync("resolverImagenProducto: 503 de un proveedor no bloquea el import, sigue con el siguiente", async function () {
+        const wikimediaCaido = crearProveedorTextoFalso(() => { throw new Error("Wikimedia respondió 503."); });
+        const openverseOk = crearProveedorTextoFalso(() => [
+            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+        ]);
+        const cliente = crearClienteSupabaseFalso();
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimediaCaido, openverse: openverseOk }
+        });
+        assert.strictEqual(resultado.estado, "encontrada");
+    });
+
+    await testAsync("resolverImagenProducto: timeout de un proveedor no lanza, solo pasa al siguiente", async function () {
+        const wikimediaTimeout = crearProveedorTextoFalso(() => { throw new Error("Tiempo de espera agotado consultando Wikimedia Commons."); });
+        const openverseOk = crearProveedorTextoFalso(() => [
+            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+        ]);
+        const cliente = crearClienteSupabaseFalso();
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimediaTimeout, openverse: openverseOk }
+        });
+        assert.strictEqual(resultado.estado, "encontrada");
+    });
+
+    await testAsync("resolverImagenProducto: circuit breaker apaga un proveedor tras fallos consecutivos dentro del mismo lote", async function () {
+        let llamadasWikimedia = 0;
+        const wikimediaSiempreFalla = {
             estaConfigurado: () => true,
-            ErrorProveedorSinCredito: ErrorSinCredito,
-            buscar: async function () { throw new ErrorSinCredito("sin crédito"); },
-            _llamadas: () => 1
+            buscar: async function () { llamadasWikimedia++; throw new Error("Wikimedia respondió 503."); }
         };
         const cliente = crearClienteSupabaseFalso();
-        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, { proveedor: proveedor });
-        assert.strictEqual(resultado.estado, "error_proveedor");
+        const estadoCircuito = {};
+        const productos = Array.from({ length: 8 }, (_, i) => ({ marca: "Marca" + i, nombre: "Nombre" + i, presentacion: "750 ml" }));
+
+        for (const producto of productos) {
+            await resolverImagenProducto(cliente, producto, {
+                proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimediaSiempreFalla, openverse: proveedorVacio() },
+                estadoCircuito: estadoCircuito
+            });
+        }
+
+        // 8 productos x hasta 3 variantes = hasta 24 intentos posibles, pero
+        // el circuit breaker debería cortar wikimedia bastante antes de eso.
+        assert.ok(llamadasWikimedia < 24, "el circuit breaker debería haber frenado los reintentos, llamadas=" + llamadasWikimedia);
+    });
+
+    await testAsync("resolverImagenProducto: prioriza Open Food Facts por barcode antes que buscar por texto", async function () {
+        const off = crearProveedorBarcodeFalso(() => [
+            { url: "https://images.openfoodfacts.org/x.jpg", sourceUrl: "https://world.openfoodfacts.org/product/123", sourceDomain: "openfoodfacts.org", title: "Johnnie Walker Black Label", fuente: "openfoodfacts", offBrand: "Johnnie Walker", offQuantity: "750 ml" }
+        ]);
+        const wikimedia = crearProveedorTextoFalso(() => { throw new Error("no debería llamarse"); });
+        const cliente = crearClienteSupabaseFalso();
+
+        const resultado = await resolverImagenProducto(cliente, Object.assign({ barcode: "3017620422003" }, TERMINOS_JW), {
+            proveedores: { openfoodfacts: off, wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
+
+        assert.strictEqual(resultado.estado, "encontrada");
+        assert.strictEqual(resultado.ganador.fuente, "openfoodfacts");
+        assert.strictEqual(wikimedia._llamadas(), 0, "no debería haber consultado Wikimedia si OFF ya encontró alta confianza");
+    });
+
+    await testAsync("resolverImagenProducto: barcode inválido no se manda a Open Food Facts", async function () {
+        let llamadasOff = 0;
+        const off = { estaConfigurado: () => true, buscarPorBarcode: async () => { llamadasOff++; return []; } };
+        const wikimedia = crearProveedorTextoFalso(() => []);
+        const cliente = crearClienteSupabaseFalso();
+
+        await resolverImagenProducto(cliente, Object.assign({ barcode: "JW-BLACK-750" }, TERMINOS_JW), {
+            proveedores: { openfoodfacts: off, wikimedia: wikimedia, openverse: proveedorVacio() }
+        });
+
+        assert.strictEqual(llamadasOff, 0, "un barcode inválido (el código interno) nunca debe consultarse contra Open Food Facts");
     });
 }
 
 ejecutar();
 
 async function ejecutar() {
+    await testDescargaSSRF();
     await testConcurrencia();
     await testResolver();
     console.log("\n" + (total - fallidos) + "/" + total + " pruebas pasaron.");
