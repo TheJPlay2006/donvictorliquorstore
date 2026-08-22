@@ -5821,6 +5821,52 @@ main .container {
 }
 
 /* ==========================
+   TARJETA DE PRODUCTO — TILT 3D + GLOW
+   Inspirado en un "Product Highlight Card" de 21st.dev (tilt + glow que
+   sigue el cursor). Adaptado a CSS custom properties + JS vanilla en vez
+   de Framer Motion. Solo en dispositivos con puntero fino y sin
+   prefers-reduced-motion (ver inicializarTiltProductos en componentes.js).
+========================== */
+
+@media (hover: hover) and (pointer: fine) {
+
+    .producto-catalogo-card {
+        transform-style: preserve-3d;
+        will-change: transform;
+    }
+
+    .producto-catalogo-card:hover {
+        transform:
+            translateY(-4px)
+            perspective(900px)
+            rotateX(var(--rx, 0deg))
+            rotateY(var(--ry, 0deg));
+        transition: transform .12s ease-out, border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .producto-catalogo-imagen::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: radial-gradient(160px circle at var(--glow-x, 50%) var(--glow-y, 50%), rgba(247, 148, 29, .35), transparent 65%);
+        opacity: 0;
+        transition: opacity .25s ease;
+        pointer-events: none;
+    }
+
+    .producto-catalogo-card:hover .producto-catalogo-imagen::after {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .producto-catalogo-card:hover {
+        transform: none;
+    }
+}
+
+/* ==========================
    PÁGINA 404
 ========================== */
 

@@ -12,7 +12,76 @@ document.addEventListener("DOMContentLoaded", async () => {
     inicializarAvisoCookies();
     window.dvInicializarIdioma?.();
     inicializarAnuncioSuperior();
+    inicializarTiltProductos();
 });
+
+// Tilt 3D + glow que sigue el cursor en .producto-catalogo-card (catálogo y
+// categorías). Delegado en document porque las tarjetas se crean
+// dinámicamente; rAF-throttled para no recalcular en cada mousemove.
+function inicializarTiltProductos() {
+    if (
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+        !window.matchMedia("(hover: hover) and (pointer: fine)").matches
+    ) {
+        return;
+    }
+
+    let tarjetaActiva = null;
+    let ultimoEvento = null;
+    let cuadroProgramado = false;
+
+    const aplicarTilt = () => {
+        cuadroProgramado = false;
+
+        if (!tarjetaActiva || !ultimoEvento) {
+            return;
+        }
+
+        const rect = tarjetaActiva.getBoundingClientRect();
+        const x = Math.min(Math.max((ultimoEvento.clientX - rect.left) / rect.width, 0), 1);
+        const y = Math.min(Math.max((ultimoEvento.clientY - rect.top) / rect.height, 0), 1);
+
+        tarjetaActiva.style.setProperty("--rx", `${((0.5 - y) * 8).toFixed(2)}deg`);
+        tarjetaActiva.style.setProperty("--ry", `${((x - 0.5) * 8).toFixed(2)}deg`);
+        tarjetaActiva.style.setProperty("--glow-x", `${(x * 100).toFixed(1)}%`);
+        tarjetaActiva.style.setProperty("--glow-y", `${(y * 100).toFixed(1)}%`);
+    };
+
+    document.addEventListener("mousemove", (evento) => {
+        const tarjeta = evento.target.closest(".producto-catalogo-card");
+
+        if (!tarjeta) {
+            return;
+        }
+
+        tarjetaActiva = tarjeta;
+        ultimoEvento = evento;
+
+        if (!cuadroProgramado) {
+            cuadroProgramado = true;
+            requestAnimationFrame(aplicarTilt);
+        }
+    });
+
+    document.addEventListener(
+        "mouseleave",
+        (evento) => {
+            const tarjeta = evento.target.closest?.(".producto-catalogo-card");
+
+            if (!tarjeta) {
+                return;
+            }
+
+            tarjeta.style.setProperty("--rx", "0deg");
+            tarjeta.style.setProperty("--ry", "0deg");
+
+            if (tarjetaActiva === tarjeta) {
+                tarjetaActiva = null;
+            }
+        },
+        true
+    );
+}
 
 function inicializarMenuMovil() {
     const botonAbrir = document.querySelector(".menu-toggle");
