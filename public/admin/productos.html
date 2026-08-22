@@ -43,6 +43,10 @@
         <div class="admin-encabezado-lista">
             <h1>Productos</h1>
             <div class="admin-encabezado-acciones">
+                <button id="btnRevisarImagenes" class="admin-boton-secundario" type="button">
+                    <i class="fa-solid fa-images" aria-hidden="true"></i>
+                    Revisar imágenes
+                </button>
                 <a href="productos-importar.html" class="admin-boton-secundario">
                     <i class="fa-solid fa-file-import" aria-hidden="true"></i>
                     Importar productos
@@ -51,6 +55,93 @@
                     <i class="fa-solid fa-plus" aria-hidden="true"></i>
                     Nuevo producto
                 </a>
+            </div>
+        </div>
+
+        <!-- Modal de Revisión y Mantenimiento de Imágenes -->
+        <div class="modal fade" id="modalRevisarImagenes" tabindex="-1" aria-labelledby="modalRevisarImagenesLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content bg-dark text-light border-secondary">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title" id="modalRevisarImagenesLabel">
+                            <i class="fa-solid fa-wand-magic-sparkles text-warning me-2"></i>
+                            Diagnóstico y Mantenimiento de Imágenes
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Resumen y estadísticas -->
+                        <div class="row g-3 mb-4 text-center">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded bg-secondary-subtle border border-secondary">
+                                    <div class="fs-3 fw-bold text-info" id="statsTotalProductos">0</div>
+                                    <div class="small text-muted">Total Productos</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded bg-secondary-subtle border border-secondary">
+                                    <div class="fs-3 fw-bold text-success" id="statsConImagen">0</div>
+                                    <div class="small text-muted">Con Imagen</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded bg-secondary-subtle border border-secondary">
+                                    <div class="fs-3 fw-bold text-danger" id="statsSinImagen">0</div>
+                                    <div class="small text-muted">Sin Imagen</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded bg-secondary-subtle border border-secondary">
+                                    <div class="fs-3 fw-bold text-warning" id="statsSospechosas">0</div>
+                                    <div class="small text-muted">Imágenes Sospechosas</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filtros del modal -->
+                        <div class="d-flex gap-2 mb-3 align-items-center">
+                            <span class="small text-muted">Mostrar:</span>
+                            <button type="button" class="btn btn-sm btn-outline-light active" id="btnFiltroMaltas" data-filtro="todas-alertas">Todas las alertas</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" id="btnFiltroSinImg" data-filtro="sin-imagen">Sin imagen</button>
+                            <button type="button" class="btn btn-sm btn-outline-light" id="btnFiltroSospechosas" data-filtro="sospechosas">Sospechosas</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="btnAnalizarEnlaces">
+                                <i class="fa-solid fa-circle-nodes me-1"></i> Detectar Enlaces Rotos
+                            </button>
+                        </div>
+
+                        <!-- Lista de productos que requieren atención -->
+                        <div class="list-group list-group-flush border-top border-secondary" id="listaAlertasImagenes" style="min-height: 200px;">
+                            <div class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm text-info mb-2" role="status"></div>
+                                <div>Analizando catálogo de productos...</div>
+                            </div>
+                        </div>
+
+                        <!-- Panel de visualización y selección de resultados de búsqueda -->
+                        <div class="card bg-secondary-subtle border-secondary mt-4 d-none" id="panelBuscadorAgente">
+                            <div class="card-header border-secondary d-flex align-items-center bg-dark">
+                                <strong id="agenteTituloProducto">Búsqueda de imágenes</strong>
+                                <span class="badge bg-info ms-2" id="agenteBadgeOrigen">DDGS Agent</span>
+                                <button type="button" class="btn-close btn-close-white ms-auto" id="btnCerrarBuscadorAgente"></button>
+                            </div>
+                            <div class="card-body">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control bg-dark text-light border-secondary" id="txtQueryAgente" placeholder="Término de búsqueda...">
+                                    <button class="btn btn-warning" type="button" id="btnEjecutarBuscadorAgente">
+                                        <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar Reemplazo
+                                    </button>
+                                </div>
+                                
+                                <div id="agenteResultados" class="row row-cols-2 row-cols-md-4 g-3">
+                                    <!-- Candidatos cargados dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -24,6 +24,7 @@ const wikimedia = require("./providers/wikimedia");
 const openverse = require("./providers/openverse");
 const upcitemdb = require("./providers/upcitemdb");
 const exa = require("./providers/exa");
+const ddgs = require("./providers/ddgs");
 
 const MAX_CANDIDATOS_DEVUELTOS = 5;
 const MAX_FALLOS_CONSECUTIVOS = 5; // circuit breaker simple, §43/§52
@@ -122,7 +123,7 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
     const consultaPersonalizada = opciones && opciones.consultaPersonalizada;
     const forzarProfundo = !!(opciones && opciones.profundo);
     const estadoCircuito = (opciones && opciones.estadoCircuito) || {};
-    const proveedores = Object.assign({ openfoodfacts, wikimedia, openverse, upcitemdb, exa }, opciones && opciones.proveedores);
+    const proveedores = Object.assign({ openfoodfacts, wikimedia, openverse, upcitemdb, exa, ddgs }, opciones && opciones.proveedores);
     const identificador = producto.codigo || producto.nombre || "?";
 
     const claveCache = consultaPersonalizada ? null : construirClaveCache(producto);
@@ -214,10 +215,22 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
                 }
             }
 
-            if (!esAlta(mejorCandidato(candidatosCrudos, producto)) && proveedores.exa.estaConfigurado()) {
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto)) && proveedores.exa && proveedores.exa.estaConfigurado()) {
                 const rE = await intentarProveedor(producto, identificador, "deep", "exa", proveedores.exa, estadoCircuito,
                     () => proveedores.exa.buscar(construirConsulta(producto), { limite: 6 }));
                 candidatosCrudos.push(...rE);
+            }
+
+            // DDGS: búsqueda web profunda gratuita via microservicio Python.
+            // Se consulta después de Exa (que tiene licencia conocida) pero como
+            // Exa es de pago y DDGS es gratuito, en la práctica DDGS será el
+            // principal proveedor "deep" para la mayoría de los imports.
+            // license=null → nunca puede llegar a confianza "alta" automáticamente.
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto)) && proveedores.ddgs && proveedores.ddgs.estaConfigurado()) {
+                const consultaDdgs = construirConsulta(producto);
+                const rD = await intentarProveedor(producto, identificador, "deep", "ddgs", proveedores.ddgs, estadoCircuito,
+                    () => proveedores.ddgs.buscar(consultaDdgs, { producto: producto }));
+                candidatosCrudos.push(...rD);
             }
         }
 

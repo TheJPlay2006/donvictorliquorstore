@@ -12,6 +12,7 @@ const wikimedia = require("./wikimedia");
 const openverse = require("./openverse");
 const upcitemdb = require("./upcitemdb");
 const exa = require("./exa");
+const ddgs = require("./ddgs");
 
 function flagHabilitado(nombreEnvVar) {
     const valor = process.env[nombreEnvVar];
@@ -31,12 +32,16 @@ function exaActivo() {
     return flagHabilitado("IMAGE_SEARCH_EXA_ENABLED") && exa.estaConfigurado();
 }
 
-// §57: "Búsqueda web profunda disponible" en la UI depende únicamente de si
-// hay algún proveedor de pago configurado (hoy Exa; Brave cuando se agregue)
-// — la etapa DEEP en sí (UPCitemdb, variantes ampliadas) ya corre siempre
+function ddgsActivo() {
+    return flagHabilitado("IMAGE_SEARCH_DDGS_ENABLED") && ddgs.estaConfigurado();
+}
+
+// §57: "Búsqueda web profunda disponible" en la UI depende de si hay algún
+// proveedor de búsqueda web configurado: Exa (de pago) o DDGS (gratuito).
+// La etapa DEEP en sí (UPCitemdb, variantes ampliadas) ya corre siempre
 // que el modo lo permita, con o sin proveedores de pago.
 function busquedaProfundaAmpliadaDisponible() {
-    return exaActivo();
+    return exaActivo() || ddgsActivo();
 }
 
 function modoBusqueda() {
@@ -45,10 +50,10 @@ function modoBusqueda() {
 
 function busquedaAutomaticaHabilitada() {
     if (!flagHabilitado("IMAGE_SEARCH_ENABLED")) { return false; }
-    return proveedoresGratuitosActivos().length > 0 || exaActivo();
+    return proveedoresGratuitosActivos().length > 0 || exaActivo() || ddgsActivo();
 }
 
 module.exports = {
-    proveedoresGratuitosActivos, exaActivo, busquedaAutomaticaHabilitada,
+    proveedoresGratuitosActivos, exaActivo, ddgsActivo, busquedaAutomaticaHabilitada,
     busquedaProfundaAmpliadaDisponible, modoBusqueda
 };

@@ -7,6 +7,30 @@ let disponibilidadSeleccionada = "todas";
 let productosFiltrados = [];
 let cantidadVisible = obtenerCantidadInicial();
 
+// Placeholder SVG elegante para productos sin imagen (botella estilizada).
+// Se usa cuando producto.imagen es null/vacío y como fallback de onerror.
+const PLACEHOLDER_IMAGEN_CATALOGO = "data:image/svg+xml," + encodeURIComponent(`
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 320' fill='none'>
+  <rect width='200' height='320' fill='%231a1008'/>
+  <!-- Etiqueta de fondo -->
+  <rect x='55' y='100' width='90' height='130' rx='4' fill='%232c1810' stroke='%23B6AAA3' stroke-width='1'/>
+  <!-- Botella -->
+  <path d='M88 60 L88 100 Q70 110 70 130 L70 230 Q70 244 84 244 L116 244 Q130 244 130 230 L130 130 Q130 110 112 100 L112 60 Z' 
+        fill='%23432912' stroke='%23c4983a' stroke-width='1.5'/>
+  <!-- Cuello de la botella -->
+  <rect x='86' y='40' width='28' height='22' rx='4' fill='%23432912' stroke='%23c4983a' stroke-width='1.5'/>
+  <!-- Tapón -->
+  <rect x='89' y='32' width='22' height='10' rx='3' fill='%23c4983a'/>
+  <!-- Linea decorativa en la etiqueta -->
+  <rect x='64' y='116' width='72' height='1' fill='%23c4983a' opacity='0.6'/>
+  <rect x='64' y='218' width='72' height='1' fill='%23c4983a' opacity='0.6'/>
+  <!-- Icono minimalista de copa -->
+  <path d='M92 148 Q100 162 108 148 L112 132 L88 132 Z' fill='%23c4983a' opacity='0.4'/>
+  <rect x='99' y='162' width='2' height='12' fill='%23c4983a' opacity='0.4'/>
+  <!-- Texto placeholder -->
+  <text x='100' y='270' text-anchor='middle' font-family='Georgia, serif' font-size='11' fill='%23B6AAA3' opacity='0.6'>Imagen próximamente</text>
+</svg>`);
+window._placeholderImagenCatalogo = PLACEHOLDER_IMAGEN_CATALOGO;
 
 document.addEventListener("DOMContentLoaded", () => {
     cargarDatosCatalogo();
@@ -301,9 +325,10 @@ function crearTarjetaProducto(producto) {
         }
 
             <img
-                src="${producto.imagen}"
+                src="${producto.imagen || PLACEHOLDER_IMAGEN_CATALOGO}"
                 alt="${producto.nombre}"
                 loading="lazy"
+                onerror="this.onerror=null;this.src=window._placeholderImagenCatalogo||this.src;"
             >
 
         </div>

@@ -13,7 +13,7 @@ process.env.IMAGE_SEARCH_MODE = "normal";
 const assert = require("assert");
 
 const { construirConsulta, construirClaveCache } = require("./consulta");
-const { calcularScore, confianzaDe, confianzaDeScore, evaluarCandidatos, detectarConflictoIdentidad } = require("./scoring");
+const { calcularScore, confianzaDe, confianzaDeScore, evaluarCandidatos, detectarConflictoIdentidad, detectarConflictoDeMarca } = require("./scoring");
 const { esIpPrivadaOEspecial, verificarFirmaImagen } = require("./ssrfFetch");
 const { procesarConConcurrencia, conReintentos } = require("./concurrencia");
 const { validarBarcode } = require("./barcode");
@@ -212,6 +212,101 @@ test("calcularScore: un conflicto de variante rechaza el candidato aunque el res
     assert.strictEqual(resultado.rechazado, true);
     assert.strictEqual(resultado.score, 0);
     assert.strictEqual(confianzaDe(resultado), "baja");
+});
+
+// ---- TEST CRÍTICO §16 — BRAND_CONFLICT (rechazo duro de marca distinta) ----
+// El caso más grave detectado en producción: Ron Centenario 12 mostrando
+// imagen de Ron Zacapa XO. Este test NUNCA debe fallar.
+test("detectarConflictoDeMarca: Ron Centenario vs Ron Zacapa es BRAND_CONFLICT (caso crítico)", function () {
+    const terminos = { marca: "Ron Centenario" };
+    const textoCandidato = "ron zacapa xo rum bottle guatemala";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.ok(conflicto !== null, "debería detectar BRAND_CONFLICT");
+    assert.strictEqual(conflicto.motivo, "BRAND_CONFLICT");
+});
+
+test("calcularScore: Ron Centenario 12 vs Ron Zacapa XO — candidato rechazado, score=0", function () {
+    const terminos = { marca: "Ron Centenario", nombre: "Ron Centenario 12 Años", presentacion: "750 ml" };
+    const resultado = calcularScore({
+        title: "Ron Zacapa XO Rum bottle Guatemala 750ml",
+        sourceDomain: "totalwine.com",
+        width: 1200, height: 1600,
+        fuente: "wikimedia"
+    }, terminos);
+    assert.strictEqual(resultado.rechazado, true, "Ron Zacapa no debe aceptarse como Ron Centenario");
+    assert.strictEqual(resultado.score, 0);
+    assert.strictEqual(resultado.motivoRechazo, "BRAND_CONFLICT");
+});
+
+test("detectarConflictoDeMarca: Buchanan's vs Old Parr es BRAND_CONFLICT", function () {
+    const terminos = { marca: "Buchanan's" };
+    const textoCandidato = "old parr 12 year old scotch whisky bottle";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.ok(conflicto !== null, "debería detectar BRAND_CONFLICT entre Buchanan's y Old Parr");
+    assert.strictEqual(conflicto.motivo, "BRAND_CONFLICT");
+});
+
+test("detectarConflictoDeMarca: Patrón vs Don Julio es BRAND_CONFLICT", function () {
+    const terminos = { marca: "Patrón" };
+    const textoCandidato = "don julio blanco tequila 750ml bottle";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.ok(conflicto !== null, "debería detectar BRAND_CONFLICT entre Patrón y Don Julio");
+    assert.strictEqual(conflicto.motivo, "BRAND_CONFLICT");
+});
+
+test("detectarConflictoDeMarca: Chivas Regal vs Glenfiddich es BRAND_CONFLICT", function () {
+    const terminos = { marca: "Chivas Regal" };
+    const textoCandidato = "glenfiddich 12 year old single malt bottle";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.ok(conflicto !== null, "Glenfiddich no debe confundirse con Chivas Regal");
+    assert.strictEqual(conflicto.motivo, "BRAND_CONFLICT");
+});
+
+test("detectarConflictoDeMarca: misma marca, no hay BRAND_CONFLICT", function () {
+    const terminos = { marca: "Ron Centenario" };
+    const textoCandidato = "ron centenario 12 anos costa rica rum bottle";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.strictEqual(conflicto, null, "cuando la marca coincide no debe haber conflicto");
+});
+
+test("detectarConflictoDeMarca: marca genérica (solo 'Ron') no genera falsos BRAND_CONFLICT", function () {
+    // Si la marca es solo una palabra genérica de categoría, no debe rechazar
+    const terminos = { marca: "Ron" };
+    const textoCandidato = "ron zacapa xo rum bottle";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.strictEqual(conflicto, null, "una marca genérica no debe producir BRAND_CONFLICT");
+});
+
+test("detectarConflictoDeMarca: candidato sin marca conocida no genera BRAND_CONFLICT", function () {
+    // Si el candidato no menciona ninguna marca conocida, no rechazamos
+    const terminos = { marca: "Ron Centenario" };
+    const textoCandidato = "dark rum aged 12 years premium bottle costa rica";
+    const conflicto = detectarConflictoDeMarca(terminos, textoCandidato);
+    assert.strictEqual(conflicto, null, "si el candidato no menciona otra marca conocida, no hay conflicto");
+});
+
+test("calcularScore: Flor de Caña 7 vs Flor de Caña 12 es AGE_CONFLICT (no BRAND_CONFLICT)", function () {
+    // Usar nombre simple "Flor de Caña 7" para que extraerNumeroEdad() captura el 7 al final del nombre
+    const terminos = { marca: "Flor de Caña", nombre: "Flor de Caña 7", presentacion: "750 ml" };
+    const resultado = calcularScore({
+        title: "Flor de Cana 12 year rum Nicaragua bottle",
+        sourceDomain: "totalwine.com",
+        width: 1200, height: 1600,
+        fuente: "wikimedia"
+    }, terminos);
+    assert.strictEqual(resultado.rechazado, true, "variante de edad incorrecta debe rechazarse");
+    // Debe ser AGE_CONFLICT (misma marca, diferente edad), no BRAND_CONFLICT
+    assert.strictEqual(resultado.motivoRechazo, "AGE_CONFLICT");
+});
+
+test("detectarConflictoIdentidad integrado: prioriza BRAND_CONFLICT sobre VARIANT_CONFLICT", function () {
+    // Ron Centenario Blanco vs Ron Zacapa Reposado — hay BRAND y VARIANT conflict
+    // Debe detectar BRAND primero
+    const terminos = { marca: "Ron Centenario", nombre: "Ron Centenario Blanco" };
+    const textoCandidato = "ron zacapa reposado rum bottle";
+    const conflicto = detectarConflictoIdentidad({}, terminos, textoCandidato);
+    assert.ok(conflicto !== null);
+    assert.strictEqual(conflicto.motivo, "BRAND_CONFLICT");
 });
 
 // ---- §19/§27: calidad — estante/colección nunca puede ser "alta" ----

@@ -20,6 +20,7 @@ module.exports = function handler(req, res) {
         enabled: providers.busquedaAutomaticaHabilitada(),
         providers: proveedoresGratuitos,
         paidProviderActive: providers.exaActivo(),
+        ddgsActive: providers.ddgsActivo(),
         deepSearchExpandedAvailable: providers.busquedaProfundaAmpliadaDisponible(),
         mode: providers.modoBusqueda(),
         maxPerImport: Number.isFinite(maximoCrudo) && maximoCrudo > 0 ? maximoCrudo : 300,

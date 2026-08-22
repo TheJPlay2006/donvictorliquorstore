@@ -44,6 +44,111 @@ const GRUPOS_VARIANTES = [
     [["original"], ["light"], ["zero"]]
 ];
 
+// Diccionario de marcas conocidas de licores: cada entrada es una lista de
+// tokens normalizados que identifican INEQUÍVOCAMENTE esa marca. Se usa para
+// detectar BRAND_CONFLICT: si buscamos "Ron Centenario" y el candidato contiene
+// "zacapa" (pero no "centenario"), se rechaza duramente.
+//
+// REGLAS:
+//   1. Solo se listan tokens ÚNICOS de la marca — no palabras genéricas como
+//      "ron", "whisky", "tequila", "vodka".
+//   2. Cada marca tiene un array de tokens: TODOS deben estar ausentes del
+//      candidato para confirmar conflicto (evita falsos positivos).
+//   3. Lista extensible — agregar marcas según el catálogo crezca.
+const MARCAS_LICORES_CONOCIDAS = [
+    // Rones
+    ["centenario"],
+    ["zacapa"],
+    ["flor", "cana"],
+    ["havana", "club"],
+    ["bacardi"],
+    ["captain", "morgan"],
+    ["malibu"],
+    ["appleton"],
+    ["diplomatico"],
+    ["mount", "gay"],
+    ["don", "papa"],
+    ["bumbu"],
+    // Whiskies / Bourbons
+    ["johnnie", "walker"],
+    ["jack", "daniels"],
+    ["jameson"],
+    ["chivas", "regal"],
+    ["glenfiddich"],
+    ["glenlivet"],
+    ["macallan"],
+    ["balvenie"],
+    ["laphroaig"],
+    ["highland", "park"],
+    ["monkey", "47"],
+    ["crown", "royal"],
+    ["buffalo", "trace"],
+    ["makers", "mark"],
+    ["jim", "beam"],
+    ["wild", "turkey"],
+    ["bulleit"],
+    ["woodford", "reserve"],
+    ["evan", "williams"],
+    ["old", "parr"],
+    ["buchanans"],
+    ["dewar"],
+    ["famous", "grouse"],
+    ["black", "bottle"],
+    ["auchentoshan"],
+    ["singleton"],
+    // Vodkas
+    ["absolut"],
+    ["grey", "goose"],
+    ["belvedere"],
+    ["ketel", "one"],
+    ["tito"],
+    ["ciroc"],
+    ["smirnoff"],
+    ["skyy"],
+    ["stolichnaya"],
+    // Tequilas / Mezcales
+    ["patron"],
+    ["don", "julio"],
+    ["herradura"],
+    ["1800"],
+    ["espolon"],
+    ["olmeca"],
+    ["jose", "cuervo"],
+    ["sierra"],
+    ["casamigos"],
+    ["clase", "azul"],
+    ["del", "maguey"],
+    ["monte", "alban"],
+    // Gins
+    ["tanqueray"],
+    ["hendricks"],
+    ["bombay", "sapphire"],
+    ["beefeater"],
+    ["gordons"],
+    ["monkey", "gin"],
+    ["roku"],
+    // Licores / Otros
+    ["baileys"],
+    ["kahlua"],
+    ["amaretto", "disaronno"],
+    ["cointreau"],
+    ["grand", "marnier"],
+    ["campari"],
+    ["aperol"],
+    ["frangelico"],
+    ["midori"],
+    ["chartreuse"],
+    ["sambuca"],
+    // Vinos / Espumantes
+    ["santa", "carolina"],
+    ["concha", "toro"],
+    ["frontera"],
+    ["casillero", "diablo"],
+    ["santa", "rita"],
+    ["montes"],
+    ["emiliana"],
+];
+
 // Nivel 1: fuerza la confianza a "baja" sin importar el resto del score —
 // casi siempre son estantes/colecciones/contexto, no el producto en sí (§19).
 // "ingredients"/"nutrition"/"back label" quedan acá (no como penalización
@@ -71,7 +176,13 @@ const DOMINIOS_CONFIABLES = [
     "wikipedia.org", "wikimedia.org", "openfoodfacts.org", "diageo.com",
     "pernod-ricard.com", "absolut.com", "bacardi.com", "brown-forman.com",
     "remy-cointreau.com", "campari.com", "beveragedynasty.com", "finedrams.com",
-    "liquorama.net"
+    "liquorama.net",
+    // Fabricantes / distribuidores adicionales de licores
+    "whiskeyadvocate.com", "whisky.com", "wine-searcher.com", "vivino.com",
+    "patrontequila.com", "don-julio.com", "floredecana.com", "centenario.com",
+    "ronzacapa.com", "havanaclub.com", "jhwalker.com", "whiskybase.com",
+    "diffordsguide.com", "drinkshop.com", "minibardelivery.com",
+    "caskers.com", "flaviar.com", "woodfordreserve.com"
 ];
 
 const DOMINIOS_PENALIZADOS = [
@@ -106,9 +217,70 @@ function clusterEnGrupo(grupo, textoNormalizado) {
     return -1;
 }
 
-// Devuelve un motivo de rechazo duro ("VARIANT_CONFLICT"/"AGE_CONFLICT") o
-// null si no hay conflicto de identidad detectado.
+// Extrae los tokens sustantivos de una marca (descartando palabras genéricas
+// de categoría que por sí solas no identifican una marca). Se usan en
+// BRAND_CONFLICT para comparar la marca esperada con la encontrada.
+const PALABRAS_GENERICAS_MARCA = new Set([
+    "ron", "rum", "whisky", "whiskey", "bourbon", "scotch", "vodka",
+    "tequila", "mezcal", "gin", "ginebra", "vino", "wine", "cerveza", "beer",
+    "licor", "liqueur", "brandy", "cognac", "espumante", "champagne",
+    "de", "del", "la", "el", "los", "las", "the", "a", "an"
+]);
+
+function tokensSustantivos(texto) {
+    return tokenizar(texto).filter((t) => t.length >= 3 && !PALABRAS_GENERICAS_MARCA.has(t));
+}
+
+// Detecta BRAND_CONFLICT: si buscamos marca X y el candidato pertenece
+// inequívocamente a una marca Y distinta. Estrategia:
+//   1. Extraer los tokens sustantivos de la marca esperada.
+//   2. Si no hay tokens sustantivos (la marca es muy genérica), no hay conflicto.
+//   3. Verificar si ALGUNO de los tokens de la marca esperada aparece en el
+//      candidato. Si sí → OK, puede ser el mismo producto.
+//   4. Si NINGÚN token esperado aparece, buscar si el candidato contiene tokens
+//      de alguna OTRA marca conocida → BRAND_CONFLICT.
+//
+// Nota: se usa el diccionario MARCAS_LICORES_CONOCIDAS para detectar marcas
+// alternativas. Si la marca conflictiva no está en el diccionario, no se
+// rechaza (evita falsos positivos con marcas desconocidas).
+function detectarConflictoDeMarca(terminos, textoCandidato) {
+    const marcaEsperada = String(terminos.marca || "").trim();
+    if (!marcaEsperada) { return null; } // sin marca esperada, no podemos detectar conflicto
+
+    const tokensMarcaEsperada = tokensSustantivos(marcaEsperada);
+    if (tokensMarcaEsperada.length === 0) { return null; } // marca genérica, no aplica
+
+    // ¿El candidato menciona algún token de la marca esperada?
+    const marcaPresente = tokensMarcaEsperada.some((t) => textoCandidato.indexOf(t) !== -1);
+    if (marcaPresente) { return null; } // la marca esperada aparece → no hay conflicto de marca
+
+    // La marca esperada NO aparece. ¿Hay otra marca conocida en el candidato?
+    for (let i = 0; i < MARCAS_LICORES_CONOCIDAS.length; i++) {
+        const tokensMarcaConocida = MARCAS_LICORES_CONOCIDAS[i];
+        // Verificar que los tokens de esta marca conocida NO coincidan con los de la esperada
+        const esMismaMarca = tokensMarcaConocida.some((t) => tokensMarcaEsperada.indexOf(t) !== -1);
+        if (esMismaMarca) { continue; } // es la misma marca (o sinónimo), no es conflicto
+
+        // ¿El candidato contiene TODOS los tokens de esta marca conocida?
+        const marcaConocidaPresente = tokensMarcaConocida.every((t) => textoCandidato.indexOf(t) !== -1);
+        if (marcaConocidaPresente) {
+            // Encontramos otra marca en el candidato → conflicto duro
+            return { motivo: "BRAND_CONFLICT", esperado: marcaEsperada, encontrado: tokensMarcaConocida.join(" ") };
+        }
+    }
+
+    return null; // no se pudo confirmar el conflicto con certeza
+}
+
+// Devuelve un motivo de rechazo duro ("BRAND_CONFLICT"/"VARIANT_CONFLICT"/
+// "AGE_CONFLICT") o null si no hay conflicto de identidad detectado.
 function detectarConflictoIdentidad(candidato, terminos, textoCandidato) {
+    // BRAND_CONFLICT se evalúa primero — es el conflicto más grave. Un candidato
+    // de marca completamente distinta no debería pasar aunque coincidan variante
+    // y edad (caso real: Ron Centenario 12 → Ron Zacapa XO).
+    const conflictoDeMarca = detectarConflictoDeMarca(terminos, textoCandidato);
+    if (conflictoDeMarca) { return conflictoDeMarca; }
+
     if (terminos.nombre) {
         const textoNombre = normalizarTexto(terminos.nombre);
         for (let g = 0; g < GRUPOS_VARIANTES.length; g++) {
@@ -141,9 +313,11 @@ function calcularScore(candidato, terminos) {
 
     const conflicto = detectarConflictoIdentidad(candidato, terminos, textoCandidato);
     if (conflicto) {
-        const mensaje = conflicto.motivo === "AGE_CONFLICT"
-            ? "candidato rechazado: edad distinta (esperado " + conflicto.esperado + ", encontrado " + conflicto.encontrado + ")"
-            : 'candidato rechazado: variante distinta ("' + conflicto.encontrado + '" vs "' + conflicto.esperado + '")';
+        const mensaje = conflicto.motivo === "BRAND_CONFLICT"
+            ? 'candidato rechazado: marca distinta ("' + conflicto.encontrado + '" en candidato, se esperaba "' + conflicto.esperado + '")'
+            : conflicto.motivo === "AGE_CONFLICT"
+                ? "candidato rechazado: edad distinta (esperado " + conflicto.esperado + ", encontrado " + conflicto.encontrado + ")"
+                : 'candidato rechazado: variante distinta ("' + conflicto.encontrado + '" vs "' + conflicto.esperado + '")';
         return {
             identityScore: 0, qualityScore: 0, score: 0, rechazado: true,
             motivoRechazo: conflicto.motivo, dominio: dominio, razones: [mensaje]
@@ -357,5 +531,5 @@ function evaluarCandidatos(candidatos, terminos) {
 
 module.exports = {
     calcularScore, confianzaDe, confianzaDeScore, evaluarCandidatos,
-    detectarConflictoIdentidad, extraerDominio, PESOS
+    detectarConflictoIdentidad, detectarConflictoDeMarca, extraerDominio, PESOS
 };

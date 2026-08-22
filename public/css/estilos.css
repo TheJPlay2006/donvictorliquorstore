@@ -248,7 +248,9 @@ body {
 }
 
 .modal-producto-imagen img {
-    max-height: 200px;
+    /* Override eliminado: max-height: 200px era demasiado restrictivo.
+       La regla principal (.modal-producto-imagen img) ya define max-height: 430px
+       con object-fit: contain — ese valor es el correcto. */
 }
 
 /* ===== Ajustes modal/producto y footer integrados desde origin/main ===== */
@@ -1829,8 +1831,11 @@ body {
     width: 100%;
     height: 100%;
     display: block;
-    object-fit: cover;
+    /* contain: la botella se ve completa sin cortes, con fondo neutro */
+    object-fit: contain;
+    object-position: center;
     transition: transform 0.3s ease;
+    padding: 8px; /* espacio interior para no pegar la imagen al borde */
 }
 
 .producto-catalogo-card:hover .producto-catalogo-imagen img {
