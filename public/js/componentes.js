@@ -14,7 +14,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     inicializarAnuncioSuperior();
     inicializarTiltProductos();
     inicializarAurorasFondo();
+    inicializarSegmentado();
 });
+
+// Thumb deslizante para .opciones-filtro.segmentado (filtro de
+// disponibilidad del catálogo). Se reposiciona vía MutationObserver sobre
+// la clase .active de cada botón, así funciona sin importar el orden en
+// que catalogo.js registre sus propios listeners de click.
+function inicializarSegmentado() {
+    document.querySelectorAll(".opciones-filtro.segmentado").forEach((contenedor) => {
+        let indicador = contenedor.querySelector(".segmentado-indicador");
+
+        if (!indicador) {
+            indicador = document.createElement("span");
+            indicador.className = "segmentado-indicador";
+            indicador.setAttribute("aria-hidden", "true");
+            contenedor.prepend(indicador);
+        }
+
+        const posicionar = () => {
+            const activo = contenedor.querySelector(".opcion-filtro.active");
+
+            if (!activo) {
+                indicador.style.opacity = "0";
+                return;
+            }
+
+            indicador.style.opacity = "1";
+            indicador.style.transform = `translateY(${activo.offsetTop}px)`;
+            indicador.style.height = `${activo.offsetHeight}px`;
+        };
+
+        posicionar();
+
+        const observador = new MutationObserver(posicionar);
+
+        contenedor.querySelectorAll(".opcion-filtro").forEach((boton) => {
+            observador.observe(boton, { attributes: true, attributeFilter: ["class"] });
+        });
+
+        window.addEventListener("resize", posicionar);
+    });
+}
 
 // Aurora de fondo (hero de inicio, contacto y nosotros): blobs de gradiente
 // radial en <canvas>, mezclados con "screen", moviéndose en órbitas

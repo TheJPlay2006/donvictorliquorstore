@@ -5961,6 +5961,50 @@ main .container {
 }
 
 /* ==========================
+   FILTRO DE DISPONIBILIDAD — SEGMENTED CONTROL
+   Inspirado en un "Segmented Control" de 21st.dev (thumb deslizante
+   animado). Aquí los botones se apilan en vertical (sidebar de
+   filtros), así que el thumb se desliza en el eje Y en vez de en X.
+   Reacciona a cualquier cambio de .active vía MutationObserver, sin
+   depender del orden de los listeners de click (ver
+   inicializarSegmentado en componentes.js).
+========================== */
+
+.opciones-filtro.segmentado {
+    position: relative;
+}
+
+.segmentado-indicador {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    height: 34px;
+    background: rgba(247, 148, 29, .16);
+    border-radius: 8px;
+    opacity: 0;
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), height .3s ease, opacity .2s ease;
+    pointer-events: none;
+}
+
+.opciones-filtro.segmentado .opcion-filtro {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+}
+
+.opciones-filtro.segmentado .opcion-filtro.active {
+    background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .segmentado-indicador {
+        transition: none;
+    }
+}
+
+/* ==========================
    PÁGINA 404
 ========================== */
 
