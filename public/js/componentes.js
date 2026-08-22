@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     animarEntradaDeSecciones();
     animarElementosGranulares();
     inicializarAcordeones();
+    inicializarAvisoCookies();
     window.dvInicializarIdioma?.();
     inicializarAnuncioSuperior();
 });
@@ -75,7 +76,13 @@ function inicializarMenuMovil() {
 }
 
 function animarEntradaDeSecciones() {
-    const secciones = document.querySelectorAll("#mainContent > section");
+    // Una sección que ya contiene elementos [data-reveal] no debe además
+    // recibir su propio fade de .reveal-seccion: las opacidades se
+    // multiplican (0.5 × 0.5 = 0.25) y la sección queda visualmente
+    // "apagada" mucho más tiempo del previsto.
+    const secciones = Array.from(
+        document.querySelectorAll("#mainContent > section")
+    ).filter((seccion) => !seccion.querySelector("[data-reveal]"));
 
     if (!secciones.length) {
         return;
@@ -110,7 +117,7 @@ function animarEntradaDeSecciones() {
     // invisible para siempre.
     setTimeout(() => {
         secciones.forEach((seccion) => seccion.classList.add("en-vista"));
-    }, 4000);
+    }, 1500);
 }
 
 // Revelado granular por elemento vía [data-reveal] (dirección opcional:
@@ -156,7 +163,7 @@ function animarElementosGranulares() {
 
     setTimeout(() => {
         elementos.forEach((elemento) => elemento.classList.add("en-vista"));
-    }, 4000);
+    }, 1500);
 }
 
 // Acordeón accesible mínimo para bloques [data-acordeon]: cada pregunta es
@@ -268,6 +275,61 @@ function inicializarAnuncioSuperior() {
         }
 
         setTimeout(() => anuncio.remove(), 320);
+    });
+}
+
+const DV_COOKIES_CLAVE = "dv_cookies_aceptadas";
+
+// El aviso de cookies se genera por JS (no vive en header/footer.html) para
+// que aparezca en TODAS las páginas con una sola fuente de verdad. Se crea
+// antes de dvInicializarIdioma() para que su primer pase de traducción ya
+// lo cubra.
+function inicializarAvisoCookies() {
+    if (document.getElementById("avisoCookies")) {
+        return;
+    }
+
+    let aceptadas = false;
+
+    try {
+        aceptadas = window.localStorage.getItem(DV_COOKIES_CLAVE) === "true";
+    } catch (error) {
+        aceptadas = false;
+    }
+
+    if (aceptadas) {
+        return;
+    }
+
+    const aviso = document.createElement("div");
+
+    aviso.id = "avisoCookies";
+    aviso.className = "aviso-cookies";
+    aviso.setAttribute("role", "region");
+    aviso.setAttribute("aria-label", "Cookies");
+
+    aviso.innerHTML = `
+        <div class="aviso-cookies-interior">
+            <p>
+                <i class="fa-solid fa-cookie-bite" aria-hidden="true"></i>
+                <span data-i18n="cookies.aviso">Usamos almacenamiento local del navegador para recordar tu idioma y mejorar tu experiencia.</span>
+                <a href="cookies.html" data-i18n="cookies.masInfo">Más información</a>
+            </p>
+            <button type="button" class="aviso-cookies-aceptar" data-i18n="cookies.aceptar">Aceptar</button>
+        </div>
+    `;
+
+    document.body.appendChild(aviso);
+
+    aviso.querySelector(".aviso-cookies-aceptar")?.addEventListener("click", () => {
+        try {
+            window.localStorage.setItem(DV_COOKIES_CLAVE, "true");
+        } catch (error) {
+            // Sin almacenamiento disponible: el aviso volverá a aparecer en la próxima visita.
+        }
+
+        aviso.classList.add("aviso-cookies-saliendo");
+        setTimeout(() => aviso.remove(), 320);
     });
 }
 

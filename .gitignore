@@ -4,3 +4,5 @@ node_modules/
 desktop.ini
 .vercel
 .env*
+.claude/settings.local.json
+graphify-out/
