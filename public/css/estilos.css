@@ -2085,6 +2085,7 @@ body {
 }
 
 .categoria-pagina-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -5900,6 +5901,62 @@ main .container {
 @media (prefers-reduced-motion: reduce) {
     .producto-catalogo-card:hover {
         transform: none;
+    }
+}
+
+/* ==========================
+   TARJETA DE CATEGORÍA — BORDE GIRATORIO
+   Inspirado en un "Hover Border Gradient" de 21st.dev: un anillo de
+   conic-gradient que gira y se revela en hover. Solo CSS (@property +
+   conic-gradient + mask-composite), sin JS ni dependencias — pausado
+   hasta el hover para no gastar CPU con varias tarjetas en pantalla.
+========================== */
+
+@property --angulo-borde-categoria {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+}
+
+.categoria-pagina-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    padding: 2px;
+    border-radius: inherit;
+    background: conic-gradient(
+        from var(--angulo-borde-categoria),
+        transparent 0deg,
+        var(--color-primary) 40deg,
+        #ffce8a 70deg,
+        transparent 110deg,
+        transparent 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity .35s ease;
+    animation: dvGirarBordeCategoria 3s linear infinite;
+    animation-play-state: paused;
+    pointer-events: none;
+}
+
+.categoria-pagina-card:hover::after {
+    opacity: 1;
+    animation-play-state: running;
+}
+
+@keyframes dvGirarBordeCategoria {
+    to {
+        --angulo-borde-categoria: 360deg;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .categoria-pagina-card::after {
+        animation: none;
     }
 }
 
