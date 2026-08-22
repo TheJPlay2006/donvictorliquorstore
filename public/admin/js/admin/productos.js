@@ -20,7 +20,7 @@ async function cargarProductosAdmin() {
                 .from("productos")
                 .select(`
                     id_producto, nombre, marca, descripcion, presentacion, precio, stock,
-                    imagen, destacado, promocion, disponible, estado, id_categoria,
+                    imagen, destacado, promocion, disponible, estado, id_categoria, codigo,
                     categorias ( nombre )
                 `)
                 .order("fecha_creacion", { ascending: false }),
@@ -113,7 +113,7 @@ function crearFilaProductoAdmin(producto) {
 
         <div class="admin-fila-info">
             <strong>${escaparTextoAdmin(producto.nombre)}</strong>
-            <span>${escaparTextoAdmin(producto.marca || "Sin marca")} · ${escaparTextoAdmin(producto.categoria || "Sin categoría")}</span>
+            <span>${escaparTextoAdmin(producto.marca || "Sin marca")} · ${escaparTextoAdmin(producto.categoria || "Sin categoría")}${producto.codigo ? ` · ${escaparTextoAdmin(producto.codigo)}` : ""}</span>
         </div>
 
         <div class="admin-fila-precio">₡${Number(producto.precio).toLocaleString("es-CR")}</div>

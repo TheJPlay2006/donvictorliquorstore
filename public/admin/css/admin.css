@@ -193,7 +193,7 @@
 }
 
 .admin-contenido-angosto {
-    width: min(640px, calc(100% - 48px));
+    width: min(760px, calc(100% - 48px));
 }
 
 .admin-migas {
@@ -543,6 +543,32 @@
     flex-wrap: wrap;
     gap: 20px 28px;
     margin: 4px 0 16px;
+}
+
+.admin-estado-linea {
+    align-items: center;
+}
+
+.admin-estado-linea .admin-check {
+    padding-left: 24px;
+    border-left: 1px solid var(--color-border);
+}
+
+.admin-estado-disponibilidad {
+    min-width: 220px;
+}
+
+.admin-estado-disponibilidad label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.admin-estado-disponibilidad select {
+    margin-bottom: 0;
+}
+
+.admin-estado-linea .admin-check {
+    margin-top: 22px;
 }
 
 .admin-check {

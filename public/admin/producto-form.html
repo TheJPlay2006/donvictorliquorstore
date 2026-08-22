@@ -28,7 +28,8 @@
 
         <div class="admin-topbar-usuario">
             <span id="adminNombreUsuario"></span>
-            <a href="https://donvictorliquorstore.vercel.app/" class="admin-topbar-ver-sitio" target="_blank" rel="noopener noreferrer">
+            <a href="https://donvictorliquorstore.vercel.app/" class="admin-topbar-ver-sitio" target="_blank"
+                rel="noopener noreferrer">
                 <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
                 Ver sitio
             </a>
@@ -40,7 +41,8 @@
     </header>
 
     <main class="admin-contenido admin-contenido-angosto">
-        <p class="admin-migas"><a href="productos.html">Productos</a> / <span id="adminFormTitulo">Nuevo producto</span></p>
+        <p class="admin-migas"><a href="productos.html">Productos</a> / <span id="adminFormTitulo">Nuevo producto</span>
+        </p>
 
         <form id="formularioProducto" class="consulta-form admin-form admin-panel-inline" novalidate>
             <h2 class="admin-form-seccion">Información del producto</h2>
@@ -58,6 +60,10 @@
                     <input id="campoPresentacion" name="presentacion" type="text" placeholder="Ej: 750 ml">
                 </div>
             </div>
+
+            <label for="campoCodigo">Código</label>
+            <input id="campoCodigo" name="codigo" type="text" placeholder="Ej: CAC-WAT-750">
+            <p class="admin-ayuda">Identifica el producto en el mensaje de WhatsApp del botón "Consultar". Opcional.</p>
 
             <label for="campoDescripcion">Descripción</label>
             <textarea id="campoDescripcion" name="descripcion" rows="4"></textarea>
@@ -84,7 +90,8 @@
                 <img id="previewImagen" class="admin-campo-imagen-preview" alt="" hidden>
 
                 <div class="admin-campo-imagen-controles">
-                    <input id="campoImagenArchivo" class="admin-input-file-oculto" type="file" accept="image/jpeg,image/png,image/webp">
+                    <input id="campoImagenArchivo" class="admin-input-file-oculto" type="file"
+                        accept="image/jpeg,image/png,image/webp">
                     <label for="campoImagenArchivo" class="admin-boton-secundario">
                         <i class="fa-solid fa-upload" aria-hidden="true"></i>
                         Elegir imagen
@@ -92,15 +99,38 @@
                     <span id="imagenActualTexto" class="admin-archivo-nombre">Sin imagen todavía.</span>
                 </div>
             </div>
-            <p class="admin-ayuda">JPEG, PNG o WebP, máx. 8 MB. Se convierte a WebP y se redimensiona automáticamente.</p>
+            <p class="admin-ayuda">JPEG, PNG o WebP, máx. 8 MB. Se convierte a WebP y se redimensiona automáticamente.
+            </p>
 
             <h2 class="admin-form-seccion">Estado</h2>
 
-            <div class="admin-form-checks">
-                <label class="admin-check"><input type="checkbox" name="disponible" checked><span>Disponible</span></label>
-                <label class="admin-check"><input type="checkbox" name="destacado"><span>Destacado</span></label>
-                <label class="admin-check"><input type="checkbox" name="promocion"><span>Promoción</span></label>
-                <label class="admin-check"><input type="checkbox" name="estado" checked><span>Activo</span></label>
+            <div class="admin-form-checks admin-estado-linea">
+
+                <div class="admin-estado-disponibilidad">
+                    <label for="campoDisponibilidad">Disponibilidad</label>
+
+                    <select id="campoDisponibilidad" name="disponibilidad">
+                        <option value="disponible">Disponible</option>
+                        <option value="agotado">Agotado</option>
+                        <option value="consultar">Consultar</option>
+                    </select>
+                </div>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="destacado">
+                    <span>Destacado</span>
+                </label>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="promocion">
+                    <span>Promoción</span>
+                </label>
+
+                <label class="admin-check">
+                    <input type="checkbox" name="estado" checked>
+                    <span>Activo</span>
+                </label>
+
             </div>
 
             <div class="admin-form-acciones">

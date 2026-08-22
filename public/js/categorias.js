@@ -22,7 +22,7 @@ async function cargarDatosCategorias() {
                     .from("productos")
                     .select(`
                         id_producto, nombre, marca, descripcion, presentacion, precio, stock,
-                        imagen, destacado, promocion, disponible, estado, id_categoria,
+                        imagen, destacado, promocion, disponible, estado, id_categoria, codigo,
                         categorias ( nombre )
                     `)
                     .eq("estado", true)
@@ -247,9 +247,8 @@ function crearTarjetaProducto(producto) {
     const precio =
         formatearPrecio(producto.precio);
 
-    const mensajeWhatsApp = encodeURIComponent(
-        `Hola, deseo consultar por el producto ${producto.nombre}.`
-    );
+    const enlaceWhatsApp =
+        crearEnlaceWhatsAppConsulta(producto);
 
     tarjeta.innerHTML = `
         <div class="producto-catalogo-imagen">
@@ -308,7 +307,7 @@ function crearTarjetaProducto(producto) {
                 </button>
 
                 <a
-                    href="https://wa.me/50672497807?text=${mensajeWhatsApp}"
+                    href="${enlaceWhatsApp}"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn-producto-whatsapp"

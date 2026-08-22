@@ -54,12 +54,19 @@ async function cargarProductoParaEditar(id) {
     const formulario = document.getElementById("formularioProducto");
     formulario.elements.nombre.value = producto.nombre || "";
     formulario.elements.marca.value = producto.marca || "";
+    formulario.elements.codigo.value = producto.codigo || "";
     formulario.elements.presentacion.value = producto.presentacion || "";
     formulario.elements.descripcion.value = producto.descripcion || "";
     formulario.elements.precio.value = producto.precio;
     formulario.elements.stock.value = producto.stock;
     formulario.elements.id_categoria.value = String(producto.id_categoria);
-    formulario.elements.disponible.checked = !!producto.disponible;
+    if (producto.disponible && Number(producto.stock) > 0) {
+        formulario.elements.disponibilidad.value = "disponible";
+    } else if (Number(producto.stock) <= 0) {
+        formulario.elements.disponibilidad.value = "agotado";
+    } else {
+        formulario.elements.disponibilidad.value = "consultar";
+    }
     formulario.elements.destacado.checked = !!producto.destacado;
     formulario.elements.promocion.checked = !!producto.promocion;
     formulario.elements.estado.checked = !!producto.estado;
@@ -130,13 +137,18 @@ async function guardarProducto(evento) {
         const datosProducto = {
             nombre: formulario.elements.nombre.value.trim(),
             marca: formulario.elements.marca.value.trim() || null,
+            codigo: formulario.elements.codigo.value.trim() || null,
             presentacion: formulario.elements.presentacion.value.trim() || null,
             descripcion: formulario.elements.descripcion.value.trim() || null,
             precio: Number(formulario.elements.precio.value),
-            stock: Number(formulario.elements.stock.value),
             id_categoria: Number(formulario.elements.id_categoria.value),
             imagen: urlImagenFinal,
-            disponible: formulario.elements.disponible.checked,
+            stock:formulario.elements.disponibilidad.value === "agotado"
+                    ? 0
+                    : Number(formulario.elements.stock.value),
+
+            disponible:formulario.elements.disponibilidad.value === "disponible",
+
             destacado: formulario.elements.destacado.checked,
             promocion: formulario.elements.promocion.checked,
             estado: formulario.elements.estado.checked
