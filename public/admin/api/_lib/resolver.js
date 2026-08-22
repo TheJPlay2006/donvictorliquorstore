@@ -205,6 +205,13 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
                         () => proveedores.wikimedia.buscar(variantesProfundas[v], { limite: 6 }));
                     candidatosCrudos.push(...rw);
                 }
+                // Openverse también merece las variantes ampliadas: en NORMAL
+                // solo se intentó con las 3 variantes cortas.
+                for (let v = 0; v < variantesProfundas.length && !esAlta(mejorCandidato(candidatosCrudos, producto)); v++) {
+                    const ro = await intentarProveedor(producto, identificador, "deep", "openverse", proveedores.openverse, estadoCircuito,
+                        () => proveedores.openverse.buscar(variantesProfundas[v], { limite: 6 }));
+                    candidatosCrudos.push(...ro);
+                }
             }
 
             if (!esAlta(mejorCandidato(candidatosCrudos, producto)) && proveedores.exa.estaConfigurado()) {

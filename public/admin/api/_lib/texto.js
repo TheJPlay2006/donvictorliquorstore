@@ -153,6 +153,21 @@ function generarVariantesConsulta(producto, opciones) {
     if (presentacion) { candidatas.push(base + " " + presentacion + " bottle"); }
     if (palabraTipoUtil) { candidatas.push(base + " " + palabraTipoUtil + " bottle"); }
     candidatas.push(base + " bottle");
+
+    // Nombres con muchos calificadores ("Captain Morgan Original Spiced
+    // Gold", "Buchanan's Deluxe 12 Años", "Flor de Caña 7 Gran Reserva") casi
+    // nunca aparecen palabra por palabra en un título/descripción real — la
+    // consulta completa da 0 resultados en Wikimedia/Openverse aunque el
+    // producto sí tenga fotos libres (verificado en vivo). Una consulta más
+    // corta con solo marca + categoría encuentra esas mismas fotos sin
+    // perder precisión: el candidato encontrado igual se vuelve a validar
+    // contra el nombre/variante/edad completos al puntuarlo, así que esto
+    // solo amplía qué se busca, nunca qué se acepta.
+    const marca = String(producto.marca || "").trim();
+    if (marca && normalizarTexto(marca) !== baseNormalizada) {
+        candidatas.push(marca + (palabraTipoUtil ? " " + palabraTipoUtil : "") + " bottle");
+    }
+
     candidatas.push(base + " product");
 
     if (profundo) {
