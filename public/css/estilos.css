@@ -5675,14 +5675,16 @@ main .container {
 }
 
 /* ==========================
-   HOME — HERO AURORA
+   AURORA DE FONDO (varios heroes)
    Inspirado en "Aurora Background" de 21st.dev (blobs de gradiente en
    <canvas>, mezclados con globalCompositeOperation "screen"). Reescrito en
-   JS vanilla (ver inicializarAuroraHero en inicio.js) con la paleta ámbar
-   / vino de la marca en vez de un preset genérico.
+   JS vanilla (ver inicializarAurorasFondo en componentes.js) con la
+   paleta ámbar / vino de la marca en vez de un preset genérico. Cada
+   <canvas class="seccion-aurora"> corre su propia animación
+   independiente; se usa en el hero de inicio, contacto y nosotros.
 ========================== */
 
-.inicio-hero-aurora {
+.seccion-aurora {
     position: absolute;
     inset: 0;
     z-index: 0;
@@ -5696,8 +5698,14 @@ main .container {
     z-index: 1;
 }
 
+.pagina-contacto .contacto-hero .container,
+.pagina-nosotros .nosotros-hero .container {
+    position: relative;
+    z-index: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .inicio-hero-aurora {
+    .seccion-aurora {
         display: none;
     }
 }
@@ -5729,6 +5737,7 @@ main .container {
 
 .propietario-foto img {
     width: 100%;
+    height: auto;
     aspect-ratio: 4 / 5;
     display: block;
     object-fit: cover;

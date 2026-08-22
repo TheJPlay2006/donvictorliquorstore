@@ -13,7 +13,119 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.dvInicializarIdioma?.();
     inicializarAnuncioSuperior();
     inicializarTiltProductos();
+    inicializarAurorasFondo();
 });
+
+// Aurora de fondo (hero de inicio, contacto y nosotros): blobs de gradiente
+// radial en <canvas>, mezclados con "screen", moviéndose en órbitas
+// sinusoidales lentas. Adaptado de un "Aurora Background" de 21st.dev
+// (React + Canvas) a JS vanilla, con la paleta ámbar/vino de la marca en
+// vez del preset original. Cada <canvas class="seccion-aurora"> corre su
+// propia animación independiente, pausada fuera de vista y desactivada
+// por completo con prefers-reduced-motion.
+function inicializarAurorasFondo() {
+    const canvases = document.querySelectorAll(".seccion-aurora");
+
+    if (
+        !canvases.length ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+        return;
+    }
+
+    const capas = [
+        ["hsla(28, 92%, 55%, .5)", "hsla(350, 65%, 32%, .35)", "transparent"],
+        ["hsla(45, 90%, 62%, .4)", "transparent", "transparent"],
+        ["hsla(6, 70%, 42%, .35)", "transparent", "transparent"],
+    ];
+
+    canvases.forEach((canvas) => {
+        const contexto = canvas.getContext("2d");
+
+        if (!contexto) {
+            return;
+        }
+
+        let tiempo = 0;
+        let animando = false;
+        let cuadroProgramado = null;
+
+        const ajustarTamano = () => {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+        };
+
+        const dibujar = () => {
+            tiempo += 0.006;
+
+            const ancho = canvas.width;
+            const alto = canvas.height;
+
+            contexto.clearRect(0, 0, ancho, alto);
+            contexto.globalCompositeOperation = "screen";
+
+            capas.forEach((capa, indice) => {
+                const fase = (indice / capas.length) * Math.PI * 2 + tiempo;
+                const x = ancho / 2 + Math.sin(fase) * (ancho * 0.28) + Math.cos(tiempo * 0.4) * (ancho * 0.08);
+                const y = alto / 2 + Math.cos(fase * 0.7) * (alto * 0.3) + Math.sin(tiempo * 0.25) * (alto * 0.08);
+
+                const gradiente = contexto.createRadialGradient(x, y, 0, x, y, Math.max(ancho, alto) * 0.42);
+                gradiente.addColorStop(0, capa[0]);
+                gradiente.addColorStop(0.5, capa[1]);
+                gradiente.addColorStop(1, capa[2]);
+
+                contexto.fillStyle = gradiente;
+                contexto.fillRect(0, 0, ancho, alto);
+            });
+
+            contexto.globalCompositeOperation = "source-over";
+
+            if (animando) {
+                cuadroProgramado = requestAnimationFrame(dibujar);
+            }
+        };
+
+        const iniciar = () => {
+            if (animando) {
+                return;
+            }
+
+            animando = true;
+            cuadroProgramado = requestAnimationFrame(dibujar);
+        };
+
+        const detener = () => {
+            animando = false;
+
+            if (cuadroProgramado) {
+                cancelAnimationFrame(cuadroProgramado);
+                cuadroProgramado = null;
+            }
+        };
+
+        ajustarTamano();
+        window.addEventListener("resize", ajustarTamano);
+
+        if ("IntersectionObserver" in window) {
+            const observador = new IntersectionObserver(
+                (entradas) => {
+                    entradas.forEach((entrada) => {
+                        if (entrada.isIntersecting) {
+                            iniciar();
+                        } else {
+                            detener();
+                        }
+                    });
+                },
+                { threshold: 0.05 }
+            );
+
+            observador.observe(canvas);
+        } else {
+            iniciar();
+        }
+    });
+}
 
 // Tilt 3D + glow que sigue el cursor en .producto-catalogo-card (catálogo y
 // categorías). Delegado en document porque las tarjetas se crean
