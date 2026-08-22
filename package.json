@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npx serve public -l 3000",
     "dev:vercel": "vercel dev",
-    "test": "node public/admin/js/admin/productos-importar.test.js",
+    "test": "node public/admin/js/admin/productos-importar.test.js && npm --prefix public/admin test",
     "supabase:start": "supabase start",
     "supabase:reset": "supabase db reset",
     "supabase:stop": "supabase stop"

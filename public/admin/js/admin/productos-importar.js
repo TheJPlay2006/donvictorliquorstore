@@ -50,13 +50,51 @@
     var ultimoReporteErrores = [];
     var ultimoNombreArchivo = "";
 
+    // Búsqueda automática de imágenes (backend, ver api/image-search/*.js).
+    var ITEMS_POR_LLAMADA_BUSQUEDA = 40;
+    var configuracionBusqueda = { enabled: false, provider: null, maxPerImport: 300, concurrency: 4 };
+    var buscandoImagenes = false;
+    var indiceDialogoActual = null;
+
     document.addEventListener("admin-listo", inicializar);
 
     async function inicializar() {
         await cargarCategorias();
+        await cargarConfiguracionBusqueda();
         configurarDropzones();
         configurarPlantillas();
         configurarBotones();
+        configurarDialogoCandidatos();
+    }
+
+    async function obtenerAccessToken() {
+        var sesion = await window.supabaseClient.auth.getSession();
+        return sesion && sesion.data && sesion.data.session ? sesion.data.session.access_token : null;
+    }
+
+    async function cargarConfiguracionBusqueda() {
+        var checkbox = document.getElementById("checkBusquedaAutomatica");
+        var estado = document.getElementById("estadoBusquedaAutomatica");
+
+        try {
+            var respuesta = await fetch("api/image-search/status");
+            if (respuesta.ok) {
+                configuracionBusqueda = await respuesta.json();
+            }
+        } catch (error) {
+            console.error("[PRODUCT_IMPORT] no se pudo consultar el estado de búsqueda de imágenes", error);
+        }
+
+        if (configuracionBusqueda.enabled) {
+            checkbox.checked = true;
+            checkbox.disabled = false;
+            estado.textContent = "Proveedor: " + configuracionBusqueda.provider + " · hasta " +
+                configuracionBusqueda.maxPerImport + " búsquedas por importación.";
+        } else {
+            checkbox.checked = false;
+            checkbox.disabled = true;
+            estado.textContent = "La búsqueda automática no está configurada todavía (falta un proveedor de imágenes). Podés seguir usando el ZIP.";
+        }
     }
 
     async function cargarCategorias() {
@@ -515,12 +553,162 @@
 
             filasValidadas = filas;
             renderizarResumenYPreview();
+
+            // §13/§24: si la búsqueda automática está activada, el flujo
+            // completo es leer → validar → detectar imágenes disponibles →
+            // buscar las que faltan → mostrar preview con fotos, sin un
+            // segundo clic. El botón manual "Buscar N imágenes
+            // automáticamente" sigue disponible para volver a intentarlo.
+            if (document.getElementById("checkBusquedaAutomatica").checked && configuracionBusqueda.enabled) {
+                var hayFaltantes = filasValidadas.some(filaElegibleParaBusqueda);
+                if (hayFaltantes) {
+                    await buscarImagenesFaltantes();
+                }
+            }
         } catch (error) {
             console.error("[PRODUCT_IMPORT] error al validar", error);
             alert(error.message || "No se pudo procesar el archivo.");
         } finally {
             estado.hidden = true;
             boton.disabled = false;
+        }
+    }
+
+    // ---------------------------------------------------------------------
+    // Búsqueda automática de imágenes (backend)
+    // ---------------------------------------------------------------------
+
+    async function buscarImagenesFaltantes() {
+        if (buscandoImagenes) { return; }
+
+        var faltantes = filasValidadas
+            .map(function (fila, indice) { return { fila: fila, indice: indice }; })
+            .filter(function (par) { return filaElegibleParaBusqueda(par.fila); });
+
+        if (faltantes.length === 0) { return; }
+
+        buscandoImagenes = true;
+        var botonGlobal = document.getElementById("btnBuscarFaltantes");
+        var estadoTexto = document.getElementById("estadoBuscandoImagenes");
+        botonGlobal.disabled = true;
+        estadoTexto.hidden = false;
+        estadoTexto.textContent = "Buscando imágenes… 0 / " + faltantes.length;
+
+        var procesadosTotal = 0;
+        var token = await obtenerAccessToken();
+
+        if (!token) {
+            estadoTexto.textContent = "Sesión inválida: no se pudo buscar imágenes.";
+            buscandoImagenes = false;
+            botonGlobal.disabled = false;
+            return;
+        }
+
+        for (var i = 0; i < faltantes.length; i += ITEMS_POR_LLAMADA_BUSQUEDA) {
+            var lote = faltantes.slice(i, i + ITEMS_POR_LLAMADA_BUSQUEDA);
+            var items = lote.map(function (par) {
+                return {
+                    indice: par.indice,
+                    nombre: par.fila.nombre,
+                    marca: par.fila.marca,
+                    presentacion: par.fila.presentacion,
+                    codigo: par.fila.codigo,
+                    barcode: par.fila.barcode
+                };
+            });
+
+            try {
+                await llamarResolveSSE(token, { items: items }, function (evento) {
+                    if (evento.tipo === "item") {
+                        aplicarResultadoBusqueda(evento.datos);
+                    } else if (evento.tipo === "progreso") {
+                        procesadosTotal = i + evento.datos.procesados;
+                        estadoTexto.textContent = "Buscando imágenes… " + procesadosTotal + " / " + faltantes.length;
+                    }
+                });
+            } catch (error) {
+                console.error("[PRODUCT_IMPORT] error en búsqueda automática de imágenes", error);
+                estadoTexto.textContent = "La búsqueda automática se interrumpió: " + (error.message || "error desconocido") + ".";
+                break;
+            }
+        }
+
+        buscandoImagenes = false;
+        botonGlobal.disabled = false;
+        estadoTexto.hidden = false;
+        renderizarResumenYPreview();
+    }
+
+    function aplicarResultadoBusqueda(datos) {
+        var fila = filasValidadas[datos.indice];
+        if (!fila) { return; }
+
+        if (datos.estado === "encontrada" || datos.estado === "revisar") {
+            fila.resolucionImagen = {
+                tipo: "busqueda",
+                valor: datos.ganador.url,
+                candidatos: datos.candidatos || [],
+                confianza: datos.confianza,
+                searchQuery: datos.searchQuery,
+                autoSeleccionado: true
+            };
+            if (datos.estado === "revisar") {
+                fila.advertencias.push("Imagen encontrada automáticamente con confianza media — revisar antes de importar.");
+            }
+        } else {
+            // sin_resultado / error_temporal / error_proveedor / omitido_limite:
+            // no se asigna ninguna imagen a ciegas (§8/§23).
+            fila.resolucionImagen = { tipo: "ninguna", candidatosPrevios: datos.candidatos || [], searchQuery: datos.searchQuery };
+            if (datos.estado === "sin_resultado") {
+                fila.advertencias.push("No se encontró una imagen confiable automáticamente.");
+            } else if (datos.mensaje) {
+                fila.advertencias.push("Búsqueda de imagen: " + datos.mensaje);
+            }
+        }
+    }
+
+    // Lee la respuesta Server-Sent-Events de /api/image-search/resolve línea
+    // por línea, invocando `alEvento({tipo, datos})` apenas llega cada evento
+    // completo (progreso real, ver §13 — nunca se simula).
+    async function llamarResolveSSE(token, cuerpo, alEvento) {
+        var respuesta = await fetch("api/image-search/resolve", {
+            method: "POST",
+            headers: { "content-type": "application/json", authorization: "Bearer " + token },
+            body: JSON.stringify(cuerpo)
+        });
+
+        if (!respuesta.ok) {
+            var detalle = await respuesta.json().catch(function () { return {}; });
+            throw new Error(detalle.error || ("HTTP " + respuesta.status));
+        }
+
+        var lector = respuesta.body.getReader();
+        var decodificador = new TextDecoder("utf-8");
+        var bufferTexto = "";
+
+        for (;;) {
+            var resultado = await lector.read();
+            if (resultado.done) { break; }
+
+            bufferTexto += decodificador.decode(resultado.value, { stream: true });
+            var bloques = bufferTexto.split("\n\n");
+            bufferTexto = bloques.pop();
+
+            bloques.forEach(function (bloque) {
+                var tipo = "message";
+                var datosCrudos = "";
+                bloque.split("\n").forEach(function (linea) {
+                    if (linea.indexOf("event:") === 0) { tipo = linea.slice(6).trim(); }
+                    else if (linea.indexOf("data:") === 0) { datosCrudos = linea.slice(5).trim(); }
+                });
+                if (datosCrudos) {
+                    try {
+                        alEvento({ tipo: tipo, datos: JSON.parse(datosCrudos) });
+                    } catch (error) {
+                        console.error("[PRODUCT_IMPORT] evento SSE inválido", error);
+                    }
+                }
+            });
         }
     }
 
@@ -541,6 +729,12 @@
 
         var codigo = String(filaCruda.codigo == null ? "" : filaCruda.codigo).trim();
         if (codigo.length > 50) { errores.push("El código supera los 50 caracteres."); }
+
+        // Columna opcional, solo para mejorar la consulta de búsqueda
+        // automática de imagen (§6/§22): un EAN/UPC/GTIN identifica el
+        // producto exacto mejor que el texto. NO se guarda en la base de
+        // datos ni se confunde con `codigo` (código interno de la tienda).
+        var barcode = String(filaCruda.barcode == null ? (filaCruda.gtin == null ? "" : filaCruda.gtin) : filaCruda.barcode).trim();
 
         var descripcion = String(filaCruda.descripcion == null ? "" : filaCruda.descripcion).trim();
 
@@ -594,6 +788,7 @@
             marca: marca || null,
             presentacion: presentacion || null,
             codigo: codigo || null,
+            barcode: barcode || null,
             descripcion: descripcion || null,
             categoriaNombre: categoriaEncontrada ? categoriaEncontrada.nombre : nombreCategoriaOriginal,
             idCategoria: categoriaEncontrada ? categoriaEncontrada.id_categoria : null,
@@ -701,6 +896,27 @@
         return "valido";
     }
 
+    // Una fila es candidata a búsqueda automática si va a importarse, todavía
+    // no tiene ninguna imagen resuelta (ni URL, ni ZIP), y — si es una
+    // actualización — no tiene ya una imagen que estemos protegiendo (§17:
+    // no reemplazar imágenes existentes salvo que el admin lo pida).
+    function filaElegibleParaBusqueda(fila) {
+        var estado = estadoFinalDeFila(fila);
+        if (estado === "error" || estado === "existente") { return false; }
+        if (fila.resolucionImagen.tipo !== "ninguna") { return false; }
+
+        var permitirReemplazo = document.getElementById("checkReemplazarImagenes").checked;
+        if (fila.estadoDuplicado === "actualizar" && fila.imagenExistente && !permitirReemplazo) {
+            return false;
+        }
+        return true;
+    }
+
+    function construirConsultaCliente(fila) {
+        if (fila.barcode) { return fila.barcode + " product bottle"; }
+        return [fila.marca, fila.nombre, fila.presentacion, "bottle"].filter(Boolean).join(" ");
+    }
+
     // ---------------------------------------------------------------------
     // Resumen + tabla de vista previa
     // ---------------------------------------------------------------------
@@ -759,8 +975,30 @@
         textoBoton.textContent = "Importar " + importables + " producto" + (importables === 1 ? "" : "s");
         document.getElementById("btnImportar").disabled = importables === 0;
 
+        actualizarBloqueBusquedaFaltantes();
+
         document.getElementById("seccionResumen").hidden = false;
         document.getElementById("seccionResumen").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function actualizarBloqueBusquedaFaltantes() {
+        var bloque = document.getElementById("bloqueBusquedaFaltantes");
+        var faltantes = filasValidadas.filter(filaElegibleParaBusqueda);
+        var conImagen = filasValidadas.filter(function (fila) {
+            return estadoFinalDeFila(fila) !== "error" && estadoFinalDeFila(fila) !== "existente" && fila.resolucionImagen.tipo !== "ninguna";
+        }).length;
+
+        if (!configuracionBusqueda.enabled || faltantes.length === 0) {
+            bloque.hidden = true;
+            return;
+        }
+
+        bloque.hidden = false;
+        document.getElementById("resumenImagenesFaltantes").textContent =
+            (conImagen + faltantes.length) + " productos a importar — " + conImagen + " con imagen, " + faltantes.length + " sin imagen.";
+        document.getElementById("textoBtnBuscarFaltantes").textContent =
+            "Buscar " + faltantes.length + " imagen" + (faltantes.length === 1 ? "" : "es") + " automáticamente";
+        document.getElementById("btnBuscarFaltantes").disabled = buscandoImagenes;
     }
 
     function crearFilaPreview(fila, indice, estado) {
@@ -775,14 +1013,27 @@
         var imagenHtml = "—";
         if (fila.resolucionImagen.tipo === "url") {
             imagenHtml = '<img class="admin-preview-miniatura" src="' + escaparAtributo(fila.resolucionImagen.valor) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
+        } else if (fila.resolucionImagen.tipo === "busqueda") {
+            var etiquetaConfianza = fila.resolucionImagen.confianza === "alta" ? "" : ' <span class="admin-badge-estado-fila advertencia">⚠ Revisar</span>';
+            imagenHtml = '<img class="admin-preview-miniatura" src="' + escaparAtributo(fila.resolucionImagen.valor) + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">' + etiquetaConfianza;
         }
         // Las miniaturas de imágenes dentro del ZIP se generan de forma
         // perezosa (ver más abajo) para no descomprimir cientos de archivos
         // de una sola vez solo para mostrar una vista previa.
 
+        var puedeBuscarImagen = configuracionBusqueda.enabled && estado !== "error" && estado !== "existente";
+        var accionesImagen = "";
+        if (puedeBuscarImagen) {
+            if (fila.resolucionImagen.tipo === "busqueda") {
+                accionesImagen = '<div class="admin-preview-acciones-imagen"><button type="button" class="admin-boton-mini" data-accion="cambiar-imagen" data-indice="' + indice + '">Cambiar</button></div>';
+            } else if (fila.resolucionImagen.tipo === "ninguna") {
+                accionesImagen = '<div class="admin-preview-acciones-imagen"><button type="button" class="admin-boton-mini" data-accion="buscar-imagen" data-indice="' + indice + '">Buscar imagen</button></div>';
+            }
+        }
+
         tr.innerHTML =
             "<td>" + (indice + 1) + "</td>" +
-            '<td class="admin-preview-celda-imagen">' + imagenHtml + "</td>" +
+            '<td class="admin-preview-celda-imagen">' + imagenHtml + accionesImagen + "</td>" +
             "<td>" + escaparTexto(fila.codigo || "—") + "</td>" +
             "<td>" + escaparTexto(fila.nombre || "—") + "</td>" +
             "<td>" + escaparTexto(fila.categoriaNombre || "—") + "</td>" +
@@ -797,9 +1048,16 @@
             fila.resolucionImagen.entrada.entry.async("blob").then(function (blob) {
                 var blobTipado = new Blob([blob], { type: fila.resolucionImagen.entrada.mime });
                 var url = URL.createObjectURL(blobTipado);
-                celdaImagen.innerHTML = '<img class="admin-preview-miniatura" src="' + url + '" alt="">';
+                celdaImagen.innerHTML = '<img class="admin-preview-miniatura" src="' + url + '" alt="">' + accionesImagen;
             }).catch(function () {
                 celdaImagen.textContent = "—";
+            });
+        }
+
+        var botonAccion = tr.querySelector('[data-accion="cambiar-imagen"], [data-accion="buscar-imagen"]');
+        if (botonAccion) {
+            botonAccion.addEventListener("click", function () {
+                abrirDialogoCandidatos(indice);
             });
         }
 
@@ -934,7 +1192,42 @@
             return resolucion.valor;
         }
 
+        if (resolucion.tipo === "busqueda") {
+            // §14: la imagen encontrada en internet SIEMPRE se descarga y se
+            // reprocesa por el backend (mismo pipeline que una imagen
+            // subida a mano) antes de guardarla — nunca se guarda la URL
+            // externa tal cual, a diferencia del caso "url" de arriba.
+            try {
+                var resultadoBusqueda = await subirImagenDesdeBusqueda(resolucion.valor, fila.nombre);
+                contadores.imagenesOk++;
+                return resultadoBusqueda;
+            } catch (error) {
+                contadores.imagenesError++;
+                fila.advertencias.push("No se pudo descargar la imagen encontrada automáticamente (" + error.message + "); se importó sin imagen.");
+                return fila.estadoDuplicado === "actualizar" ? undefined : null;
+            }
+        }
+
         return fila.estadoDuplicado === "actualizar" ? undefined : null;
+    }
+
+    async function subirImagenDesdeBusqueda(url, nombreBase) {
+        var token = await obtenerAccessToken();
+        if (!token) { throw new Error("sesión inválida"); }
+
+        var respuesta = await fetch("api/image-search/import-image", {
+            method: "POST",
+            headers: { "content-type": "application/json", authorization: "Bearer " + token },
+            body: JSON.stringify({ url: url, nombreBase: nombreBase })
+        });
+
+        var cuerpo = await respuesta.json().catch(function () { return {}; });
+
+        if (!respuesta.ok) {
+            throw new Error(cuerpo.error || ("HTTP " + respuesta.status));
+        }
+
+        return cuerpo.url;
     }
 
     // ---------------------------------------------------------------------
@@ -1144,11 +1437,139 @@
     }
 
     // ---------------------------------------------------------------------
+    // Selector de candidatos ("Cambiar" / "Buscar imagen" por fila) — §10/§11
+    // ---------------------------------------------------------------------
+
+    function configurarDialogoCandidatos() {
+        var dialogo = document.getElementById("dialogCandidatos");
+
+        document.getElementById("btnDialogCerrar").addEventListener("click", function () {
+            dialogo.close();
+        });
+
+        document.getElementById("btnDialogSinImagen").addEventListener("click", function () {
+            if (indiceDialogoActual === null) { return; }
+            var fila = filasValidadas[indiceDialogoActual];
+            fila.resolucionImagen = { tipo: "ninguna" };
+            dialogo.close();
+            renderizarResumenYPreview();
+        });
+
+        document.getElementById("btnDialogBuscarDeNuevo").addEventListener("click", async function () {
+            if (indiceDialogoActual === null) { return; }
+            await buscarDeNuevoEnDialogo(indiceDialogoActual);
+        });
+    }
+
+    function abrirDialogoCandidatos(indice) {
+        indiceDialogoActual = indice;
+        var fila = filasValidadas[indice];
+        var dialogo = document.getElementById("dialogCandidatos");
+
+        document.getElementById("dialogCandidatosProducto").textContent =
+            [fila.marca, fila.nombre, fila.presentacion].filter(Boolean).join(" · ");
+        document.getElementById("dialogCandidatosQuery").value =
+            fila.resolucionImagen.searchQuery || construirConsultaCliente(fila);
+        document.getElementById("dialogCandidatosEstado").textContent = "";
+
+        var candidatosPrevios = (fila.resolucionImagen.candidatos || fila.resolucionImagen.candidatosPrevios || []);
+        renderizarCandidatosEnDialogo(candidatosPrevios, fila.resolucionImagen.valor || null);
+
+        dialogo.showModal();
+    }
+
+    function renderizarCandidatosEnDialogo(candidatos, urlSeleccionadaActual) {
+        var grid = document.getElementById("dialogCandidatosGrid");
+        grid.innerHTML = "";
+
+        if (candidatos.length === 0) {
+            grid.innerHTML = '<p class="admin-ayuda">Sin candidatos todavía. Probá "Buscar de nuevo".</p>';
+            return;
+        }
+
+        candidatos.forEach(function (candidato) {
+            var celda = document.createElement("div");
+            celda.className = "admin-candidato" + (candidato.url === urlSeleccionadaActual ? " seleccionado" : "");
+            celda.innerHTML =
+                '<img src="' + escaparAtributo(candidato.url) + '" alt="" loading="lazy" onerror="this.style.opacity=\'.3\'">' +
+                "<span>" + escaparTexto(candidato.sourceDomain || "") + " · " + Math.round(candidato.score || 0) + "</span>";
+            celda.addEventListener("click", function () {
+                seleccionarCandidato(candidato, candidatos);
+            });
+            grid.appendChild(celda);
+        });
+    }
+
+    function seleccionarCandidato(candidato, todosLosCandidatos) {
+        if (indiceDialogoActual === null) { return; }
+        var fila = filasValidadas[indiceDialogoActual];
+
+        fila.resolucionImagen = {
+            tipo: "busqueda",
+            valor: candidato.url,
+            candidatos: todosLosCandidatos,
+            confianza: candidato.confianza || "media",
+            searchQuery: document.getElementById("dialogCandidatosQuery").value,
+            autoSeleccionado: false
+        };
+
+        // Reemplazo manual: ya no hace falta la advertencia de "revisar",
+        // el admin acaba de confirmar la imagen a ojo.
+        fila.advertencias = fila.advertencias.filter(function (m) {
+            return m.indexOf("revisar antes de importar") === -1 && m.indexOf("No se encontró una imagen confiable") === -1;
+        });
+
+        document.getElementById("dialogCandidatos").close();
+        renderizarResumenYPreview();
+    }
+
+    async function buscarDeNuevoEnDialogo(indice) {
+        var fila = filasValidadas[indice];
+        var consulta = document.getElementById("dialogCandidatosQuery").value.trim();
+        var estadoDialogo = document.getElementById("dialogCandidatosEstado");
+
+        if (!consulta) { return; }
+
+        estadoDialogo.textContent = "Buscando…";
+
+        var token = await obtenerAccessToken();
+        if (!token) {
+            estadoDialogo.textContent = "Sesión inválida.";
+            return;
+        }
+
+        try {
+            var ultimoResultado = null;
+            await llamarResolveSSE(token, {
+                items: [{ indice: indice, nombre: fila.nombre, marca: fila.marca, presentacion: fila.presentacion, codigo: fila.codigo, barcode: fila.barcode }],
+                forzar: true,
+                consultaPersonalizada: consulta
+            }, function (evento) {
+                if (evento.tipo === "item") { ultimoResultado = evento.datos; }
+            });
+
+            if (!ultimoResultado) {
+                estadoDialogo.textContent = "Sin respuesta del proveedor.";
+                return;
+            }
+
+            estadoDialogo.textContent = ultimoResultado.candidatos.length + " candidatos encontrados.";
+            renderizarCandidatosEnDialogo(ultimoResultado.candidatos || [], ultimoResultado.ganador ? ultimoResultado.ganador.url : null);
+
+            // No se auto-selecciona nada acá: el admin elige a mano de la
+            // grilla (por eso no se llama a aplicarResultadoBusqueda).
+        } catch (error) {
+            estadoDialogo.textContent = "Error: " + (error.message || "desconocido");
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // Botones
     // ---------------------------------------------------------------------
 
     function configurarBotones() {
         document.getElementById("btnValidarArchivo").addEventListener("click", validarArchivos);
+        document.getElementById("btnBuscarFaltantes").addEventListener("click", buscarImagenesFaltantes);
         document.getElementById("btnImportar").addEventListener("click", ejecutarImportacion);
         document.getElementById("btnCancelarImportacion").addEventListener("click", function () {
             ocultarSeccionesResultado();

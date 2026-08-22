@@ -1,0 +1,14 @@
+{
+  "name": "donvictorliquorstore-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Vercel Functions del panel admin (api/) — búsqueda automática de imágenes de producto.",
+  "scripts": {
+    "test": "node api/_lib/imageSearch.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "sharp": "^0.35.3"
+  }
+}

@@ -53,7 +53,12 @@
                 Completá la plantilla en Excel, LibreOffice o Google Sheets y luego subila en el paso 2.
                 La columna <code>imagen</code> puede ser el nombre de un archivo dentro del ZIP del paso 3
                 (ej. <code>JW-BLACK-750.jpg</code>) o una URL <code>https://...</code>. Si la dejás vacía,
-                se busca automáticamente una imagen con el mismo nombre que el <code>codigo</code>.
+                se busca automáticamente una imagen con el mismo nombre que el <code>codigo</code>, y si
+                tampoco existe se puede buscar en internet (paso 3). Columna opcional
+                <code>barcode</code> (o <code>gtin</code>): si tenés el código de barras/EAN/UPC del
+                producto, mejora mucho la precisión de esa búsqueda automática — no reemplaza a
+                <code>codigo</code> (que sigue siendo el identificador interno) y no rompe archivos que
+                no la incluyan.
             </p>
             <div class="admin-importar-acciones-plantilla">
                 <button type="button" id="btnDescargarPlantillaCsv" class="admin-boton-secundario">
@@ -83,7 +88,20 @@
 
         <!-- Paso 3 -->
         <section class="admin-panel-inline">
-            <h2 class="admin-panel-titulo">Paso 3 · Seleccionar imágenes <span class="admin-opcional">(opcional)</span></h2>
+            <h2 class="admin-panel-titulo">Paso 3 · Imágenes de productos</h2>
+
+            <label class="admin-check admin-check-busqueda">
+                <input type="checkbox" id="checkBusquedaAutomatica">
+                <span>Buscar imágenes automáticamente</span>
+            </label>
+            <p class="admin-ayuda admin-ayuda-lg">
+                Si un producto no tiene imagen, Don Víctor intentará encontrarla automáticamente
+                utilizando su código, marca, nombre y presentación. Las imágenes encontradas se
+                revisan antes de importar — nunca se asignan a ciegas.
+            </p>
+            <p id="estadoBusquedaAutomatica" class="admin-archivo-nombre"></p>
+
+            <h3 class="admin-form-seccion">O subí un ZIP de imágenes <span class="admin-opcional">(opcional)</span></h3>
 
             <div id="dzImagenes" class="admin-dropzone" tabindex="0" role="button" aria-label="Seleccionar ZIP de imágenes">
                 <i class="fa-solid fa-file-zipper" aria-hidden="true"></i>
@@ -92,6 +110,11 @@
                 <input id="inputImagenes" type="file" accept=".zip" class="admin-input-file-oculto">
             </div>
             <p id="estadoArchivoImagenes" class="admin-archivo-nombre"></p>
+            <p class="admin-ayuda">
+                Orden de prioridad para la imagen de cada producto: URL en la columna <code>imagen</code> →
+                archivo indicado en el ZIP → archivo en el ZIP que coincide con el <code>codigo</code> →
+                búsqueda automática (si está activada) → sin imagen.
+            </p>
         </section>
 
         <!-- Duplicados -->
@@ -110,6 +133,15 @@
             <p class="admin-ayuda">
                 Un producto se considera existente cuando su <code>codigo</code> ya está en la base de datos.
                 Filas sin código nunca actualizan un producto existente: siempre se crean como nuevos.
+            </p>
+
+            <label class="admin-check">
+                <input type="checkbox" id="checkReemplazarImagenes">
+                <span>Reemplazar imágenes existentes</span>
+            </label>
+            <p class="admin-ayuda">
+                Apagado por defecto: si un producto existente ya tiene imagen, ni el ZIP ni la búsqueda
+                automática la van a reemplazar salvo que actives esta opción.
             </p>
         </section>
 
@@ -134,6 +166,15 @@
             </div>
 
             <div id="categoriasNoEncontradas" class="admin-mensaje-error" hidden></div>
+
+            <div id="bloqueBusquedaFaltantes" class="admin-bloque-busqueda" hidden>
+                <p id="resumenImagenesFaltantes" class="admin-ayuda"></p>
+                <button type="button" id="btnBuscarFaltantes" class="admin-boton-secundario">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <span id="textoBtnBuscarFaltantes">Buscar imágenes automáticamente</span>
+                </button>
+                <p id="estadoBuscandoImagenes" class="admin-archivo-nombre" hidden></p>
+            </div>
 
             <div class="admin-tabla-scroll">
                 <table class="admin-tabla-preview">
@@ -197,6 +238,25 @@
             </div>
         </section>
     </main>
+
+    <!-- Selector de candidatos de imagen (buscar/cambiar imagen de una fila) -->
+    <dialog id="dialogCandidatos" class="admin-dialog-candidatos">
+        <h2 class="admin-panel-titulo">Imagen del producto</h2>
+        <p id="dialogCandidatosProducto" class="admin-ayuda"></p>
+
+        <div class="admin-dialog-busqueda">
+            <input id="dialogCandidatosQuery" type="text" placeholder="Términos de búsqueda">
+            <button type="button" id="btnDialogBuscarDeNuevo" class="admin-boton-secundario">Buscar de nuevo</button>
+        </div>
+
+        <p id="dialogCandidatosEstado" class="admin-archivo-nombre"></p>
+        <div id="dialogCandidatosGrid" class="admin-candidatos-grid"></div>
+
+        <div class="admin-form-acciones">
+            <button type="button" id="btnDialogSinImagen" class="admin-boton-secundario">Continuar sin imagen</button>
+            <button type="button" id="btnDialogCerrar" class="admin-boton-secundario">Cancelar</button>
+        </div>
+    </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
