@@ -20,6 +20,8 @@ module.exports = function handler(req, res) {
         enabled: providers.busquedaAutomaticaHabilitada(),
         providers: proveedoresGratuitos,
         paidProviderActive: providers.exaActivo(),
+        deepSearchExpandedAvailable: providers.busquedaProfundaAmpliadaDisponible(),
+        mode: providers.modoBusqueda(),
         maxPerImport: Number.isFinite(maximoCrudo) && maximoCrudo > 0 ? maximoCrudo : 300,
         concurrency: Math.max(1, Math.min(Number.isFinite(concurrenciaCruda) ? concurrenciaCruda : 3, 8))
     });

@@ -3,14 +3,21 @@
 // Correr con: node public/admin/api/_lib/imageSearch.test.js
 "use strict";
 
+// IMPORTANTE: modo "normal" acá (no "deep") para que la etapa DEEP nunca se
+// dispare sola durante los tests — evita que un test "offline" termine
+// llamando de verdad a la API real de UPCitemdb (cuota compartida de
+// 100/día) solo porque un fake de Wikimedia nunca llega a "alta". Los tests
+// que sí quieren probar DEEP lo piden explícitamente con `profundo: true`.
+process.env.IMAGE_SEARCH_MODE = "normal";
+
 const assert = require("assert");
 
 const { construirConsulta, construirClaveCache } = require("./consulta");
-const { calcularScore, confianzaDeScore, evaluarCandidatos } = require("./scoring");
+const { calcularScore, confianzaDe, confianzaDeScore, evaluarCandidatos, detectarConflictoIdentidad } = require("./scoring");
 const { esIpPrivadaOEspecial, verificarFirmaImagen } = require("./ssrfFetch");
 const { procesarConConcurrencia, conReintentos } = require("./concurrencia");
 const { validarBarcode } = require("./barcode");
-const { normalizarTexto, presentacionAMililitros, generarVariantesConsulta, nombreCompleto } = require("./texto");
+const { normalizarTexto, presentacionAMililitros, generarVariantesConsulta, nombreCompleto, extraerNumeroEdad, aplicarAliases } = require("./texto");
 const { licenciaPermiteUsoComercialYDerivados } = require("./providers/openverse");
 
 let total = 0;
@@ -59,23 +66,40 @@ test("construirConsulta funciona con datos mínimos (solo nombre)", function () 
 });
 
 // ---- construirClaveCache ----
+// Las claves llevan un prefijo "v{IMAGE_SEARCH_ALGORITHM_VERSION}:" (§42),
+// por eso se busca la subcadena en vez de un "startsWith" fijo — así el test
+// no se rompe si se sube la versión del algoritmo más adelante.
 test("construirClaveCache usa barcode como clave estable si existe", function () {
     const clave1 = construirClaveCache({ barcode: "5000267023585", nombre: "A" });
     const clave2 = construirClaveCache({ barcode: "5000267023585", nombre: "B distinto" });
     assert.strictEqual(clave1, clave2);
-    assert.ok(clave1.startsWith("barcode:"));
+    assert.ok(clave1.indexOf("barcode:") !== -1);
 });
 
 test("construirClaveCache usa codigo si no hay barcode", function () {
     const clave = construirClaveCache({ codigo: "JW-BLACK-750", nombre: "X" });
-    assert.strictEqual(clave, "codigo:jw-black-750");
+    assert.ok(clave.indexOf("codigo:jw-black-750") !== -1, clave);
 });
 
 test("construirClaveCache cae a hash de la consulta si no hay codigo ni barcode", function () {
     const clave1 = construirClaveCache({ nombre: "Absolut Vodka", marca: "Absolut", presentacion: "750 ml" });
     const clave2 = construirClaveCache({ nombre: "Absolut Vodka", marca: "Absolut", presentacion: "750 ml" });
     assert.strictEqual(clave1, clave2);
-    assert.ok(clave1.startsWith("query:"));
+    assert.ok(clave1.indexOf("query:") !== -1);
+});
+
+test("construirClaveCache: subir IMAGE_SEARCH_ALGORITHM_VERSION invalida el cache anterior (§42)", function () {
+    const anterior = process.env.IMAGE_SEARCH_ALGORITHM_VERSION;
+    try {
+        process.env.IMAGE_SEARCH_ALGORITHM_VERSION = "2";
+        const claveV2 = construirClaveCache({ codigo: "JW-BLACK-750" });
+        process.env.IMAGE_SEARCH_ALGORITHM_VERSION = "3";
+        const claveV3 = construirClaveCache({ codigo: "JW-BLACK-750" });
+        assert.notStrictEqual(claveV2, claveV3);
+    } finally {
+        if (anterior === undefined) { delete process.env.IMAGE_SEARCH_ALGORITHM_VERSION; }
+        else { process.env.IMAGE_SEARCH_ALGORITHM_VERSION = anterior; }
+    }
 });
 
 test("construirClaveCache: mismo producto con distinto código da distinta clave", function () {
@@ -146,6 +170,74 @@ test("calcularScore: no confunde Don Julio Blanco con Reposado (§21)", function
     const correcto = calcularScore({ title: "Don Julio Blanco tequila bottle", sourceDomain: "totalwine.com" }, terminos).score;
     const equivocado = calcularScore({ title: "Don Julio Reposado tequila bottle", sourceDomain: "totalwine.com" }, terminos).score;
     assert.ok(equivocado < correcto);
+});
+
+// ---- §62: rechazo DURO de variante/edad (identidad, no penalización) ----
+test("detectarConflictoIdentidad: Black Label vs Red Label es VARIANT_CONFLICT", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Johnnie Walker Black Label" }, "johnnie walker red label bottle");
+    assert.ok(c && c.motivo === "VARIANT_CONFLICT");
+});
+
+test("detectarConflictoIdentidad: Blanco vs Reposado es VARIANT_CONFLICT", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Don Julio Blanco" }, "don julio reposado tequila bottle");
+    assert.ok(c && c.motivo === "VARIANT_CONFLICT");
+});
+
+test("detectarConflictoIdentidad: Silver vs Añejo es VARIANT_CONFLICT (silver es sinónimo de blanco)", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Patrón Silver" }, "patron anejo tequila bottle");
+    assert.ok(c && c.motivo === "VARIANT_CONFLICT");
+});
+
+test("detectarConflictoIdentidad: Blanco y Silver NO conflictan (son sinónimos)", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Don Julio Blanco" }, "don julio silver tequila bottle");
+    assert.strictEqual(c, null);
+});
+
+test("detectarConflictoIdentidad: 7 años vs 12 años es AGE_CONFLICT", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Flor de Caña 7" }, "flor de cana 12 years rum bottle");
+    assert.ok(c && c.motivo === "AGE_CONFLICT");
+});
+
+test("detectarConflictoIdentidad: 12 años vs 18 años es AGE_CONFLICT", function () {
+    const c = detectarConflictoIdentidad({}, { nombre: "Chivas Regal 12 Años" }, "chivas regal 18 year old bottle");
+    assert.ok(c && c.motivo === "AGE_CONFLICT");
+});
+
+test("calcularScore: un conflicto de variante rechaza el candidato aunque el resto matchee perfecto", function () {
+    const terminos = { marca: "Johnnie Walker", nombre: "Johnnie Walker Black Label", presentacion: "750 ml" };
+    const resultado = calcularScore({
+        title: "Johnnie Walker Red Label 750ml bottle", sourceDomain: "totalwine.com",
+        width: 2000, height: 2000, fuente: "wikimedia"
+    }, terminos);
+    assert.strictEqual(resultado.rechazado, true);
+    assert.strictEqual(resultado.score, 0);
+    assert.strictEqual(confianzaDe(resultado), "baja");
+});
+
+// ---- §19/§27: calidad — estante/colección nunca puede ser "alta" ----
+test("confianzaDe: 'supermarket'/'store'/'bottles of' fuerzan tope baja aunque el texto coincida perfecto", function () {
+    const terminos = { marca: "Bacardí", nombre: "Bacardí Carta Blanca", presentacion: "750 ml" };
+    const casosMalos = [
+        "Bacardí Carta Blanca 750ml — HK supermarket shelf",
+        "wines shop — Bacardí Carta Blanca and other bottles of rum",
+        "Bacardí Carta Blanca liquor store collection assortment"
+    ];
+    casosMalos.forEach((title) => {
+        const resultado = calcularScore({ title: title, sourceDomain: "example.com", width: 1200, height: 1200, fuente: "wikimedia" }, terminos);
+        assert.strictEqual(confianzaDe(resultado), "baja", 'debería ser baja para: "' + title + '"');
+    });
+});
+
+test("confianzaDe: una sola botella con fondo neutro y buena resolución puede ser alta", function () {
+    const terminos = { marca: "Bacardí", nombre: "Bacardí Carta Blanca", presentacion: "750 ml" };
+    const resultado = calcularScore({ title: "Bacardí Carta Blanca rum bottle product photo", sourceDomain: "totalwine.com", width: 1200, height: 1600, fuente: "wikimedia" }, terminos);
+    assert.strictEqual(confianzaDe(resultado), "alta");
+});
+
+test("confianzaDe: fuente sin licencia conocida (ej. UPCitemdb) nunca llega a alta aunque matchee perfecto", function () {
+    const terminos = { marca: "Chivas Regal", nombre: "Chivas Regal 12 Años", presentacion: "750 ml" };
+    const resultado = calcularScore({ title: "Chivas Regal 12 Años 750ml bottle", sourceDomain: "walmart.com", width: 1200, height: 1200, fuente: "upcitemdb" }, terminos);
+    assert.notStrictEqual(confianzaDe(resultado), "alta");
 });
 
 test("calcularScore: premia buena resolución y proporción de botella, penaliza imágenes diminutas", function () {
@@ -467,7 +559,7 @@ async function testResolver() {
 
     await testAsync("resolverImagenProducto: candidato de alta confianza (Wikimedia) queda 'encontrada'", async function () {
         const wikimedia = crearProveedorTextoFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://commons.wikimedia.org/wiki/File:x.jpg", sourceDomain: "commons.wikimedia.org", title: "Johnnie Walker Black Label 750ml bottle" }
+            { url: "https://x.com/a.jpg", sourceUrl: "https://commons.wikimedia.org/wiki/File:x.jpg", sourceDomain: "commons.wikimedia.org", title: "Johnnie Walker Black Label 750ml bottle", fuente: "wikimedia" }
         ]);
         const cliente = crearClienteSupabaseFalso();
         const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
@@ -504,7 +596,7 @@ async function testResolver() {
 
     await testAsync("resolverImagenProducto: usa el cache y NO vuelve a llamar a los proveedores", async function () {
         const wikimedia = crearProveedorTextoFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "wikimedia" }
         ]);
         const cliente = crearClienteSupabaseFalso();
         const proveedores = { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() };
@@ -518,7 +610,7 @@ async function testResolver() {
 
     await testAsync("resolverImagenProducto: 'forzar' ignora el cache y vuelve a buscar", async function () {
         const wikimedia = crearProveedorTextoFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "wikimedia" }
         ]);
         const cliente = crearClienteSupabaseFalso();
         const proveedores = { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio() };
@@ -535,7 +627,7 @@ async function testResolver() {
                 error.retryAfterMs = 1;
                 throw error;
             }
-            return [{ url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle" }];
+            return [{ url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/jw-black", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "wikimedia" }];
         });
         const cliente = crearClienteSupabaseFalso();
         const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
@@ -548,7 +640,7 @@ async function testResolver() {
     await testAsync("resolverImagenProducto: 503 de un proveedor no bloquea el import, sigue con el siguiente", async function () {
         const wikimediaCaido = crearProveedorTextoFalso(() => { throw new Error("Wikimedia respondió 503."); });
         const openverseOk = crearProveedorTextoFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "openverse" }
         ]);
         const cliente = crearClienteSupabaseFalso();
         const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
@@ -560,7 +652,7 @@ async function testResolver() {
     await testAsync("resolverImagenProducto: timeout de un proveedor no lanza, solo pasa al siguiente", async function () {
         const wikimediaTimeout = crearProveedorTextoFalso(() => { throw new Error("Tiempo de espera agotado consultando Wikimedia Commons."); });
         const openverseOk = crearProveedorTextoFalso(() => [
-            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle" }
+            { url: "https://x.com/a.jpg", sourceUrl: "https://x.com", sourceDomain: "wine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "openverse" }
         ]);
         const cliente = crearClienteSupabaseFalso();
         const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
@@ -619,6 +711,113 @@ async function testResolver() {
 
         assert.strictEqual(llamadasOff, 0, "un barcode inválido (el código interno) nunca debe consultarse contra Open Food Facts");
     });
+
+    // ---- §3/§9/§28: etapa DEEP solo se activa si NORMAL no alcanzó "alta" ----
+    await testAsync("resolverImagenProducto: NO pasa a DEEP si NORMAL ya encontró alta confianza", async function () {
+        const wikimedia = crearProveedorTextoFalso(() => [
+            { url: "https://x.com/a.jpg", sourceUrl: "https://www.totalwine.com/x", sourceDomain: "totalwine.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "wikimedia" }
+        ]);
+        let llamadasUpc = 0;
+        const upc = { estaConfigurado: () => true, buscar: async () => { llamadasUpc++; return []; }, buscarPorBarcode: async () => [], descubrirBarcode: async () => null };
+        const cliente = crearClienteSupabaseFalso();
+
+        await resolverImagenProducto(cliente, TERMINOS_JW, {
+            profundo: true,
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: proveedorVacio(), upcitemdb: upc }
+        });
+
+        assert.strictEqual(llamadasUpc, 0, "no debería haber llamado a UPCitemdb si NORMAL ya dio alta confianza");
+    });
+
+    await testAsync("resolverImagenProducto: pasa a DEEP (UPCitemdb) cuando NORMAL solo da confianza media/baja", async function () {
+        const wikimediaDebil = crearProveedorTextoFalso(() => [
+            { url: "https://x.com/a.jpg", sourceUrl: "https://example.com/x", sourceDomain: "example.com", title: "whisky article", fuente: "wikimedia" }
+        ]);
+        let llamadasUpc = 0;
+        const upc = {
+            estaConfigurado: () => true,
+            buscar: async () => { llamadasUpc++; return [{ url: "https://cdn.walmart.com/x.jpg", sourceDomain: "walmart.com", title: "Johnnie Walker Black Label 750ml bottle", fuente: "upcitemdb", license: null }]; },
+            buscarPorBarcode: async () => [],
+            descubrirBarcode: async () => null
+        };
+        const cliente = crearClienteSupabaseFalso();
+
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            profundo: true,
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimediaDebil, openverse: proveedorVacio(), upcitemdb: upc }
+        });
+
+        assert.ok(llamadasUpc > 0, "debería haber consultado UPCitemdb en la etapa profunda");
+        // Y aunque UPCitemdb matchee perfecto, nunca puede quedar "alta" (sin licencia conocida).
+        assert.notStrictEqual(resultado.confianza, "alta");
+    });
+
+    await testAsync("resolverImagenProducto: deduplica candidatos con la misma URL de distintos proveedores", async function () {
+        const urlCompartida = "https://upload.wikimedia.org/mismo-archivo.jpg";
+        const wikimedia = crearProveedorTextoFalso(() => [
+            { url: urlCompartida + "?utm_source=a", sourceDomain: "commons.wikimedia.org", title: "Johnnie Walker Black Label bottle", fuente: "wikimedia" }
+        ]);
+        const openverse = crearProveedorTextoFalso(() => [
+            { url: urlCompartida + "?utm_source=b", sourceDomain: "commons.wikimedia.org", title: "Johnnie Walker Black Label bottle", fuente: "openverse" }
+        ]);
+        const cliente = crearClienteSupabaseFalso();
+
+        const resultado = await resolverImagenProducto(cliente, TERMINOS_JW, {
+            proveedores: { openfoodfacts: crearProveedorBarcodeFalso(() => []), wikimedia: wikimedia, openverse: openverse }
+        });
+
+        assert.strictEqual(resultado.candidatos.length, 1, "las dos URLs (misma imagen, distinto query string) deberían deduplicarse a una sola");
+    });
+}
+
+// ---- §26/§27: query generation (alias ES→EN, unidades) ----
+function testQueryGeneration() {
+    test("aplicarAliases traduce 'años' a 'years' para la consulta", function () {
+        assert.strictEqual(aplicarAliases("Chivas Regal 12 años bottle"), "Chivas Regal 12 years bottle");
+    });
+    test("aplicarAliases traduce 'añejo' a 'anejo' para la consulta", function () {
+        assert.strictEqual(aplicarAliases("Ron añejo bottle"), "Ron anejo bottle");
+    });
+    test("aplicarAliases devuelve null si ningún alias aplica (no genera variante duplicada)", function () {
+        assert.strictEqual(aplicarAliases("Absolut Vodka bottle"), null);
+    });
+    test("presentacionAMililitros reconoce 75cl == 750ml", function () {
+        assert.strictEqual(presentacionAMililitros("75cl"), 750);
+    });
+}
+testQueryGeneration();
+
+// ---- §5/§46: UPCitemdb (mockeado con fetch falso, sin red real) ----
+async function testUpcitemdb() {
+    const upcitemdb = require("./providers/upcitemdb");
+    const fetchOriginal = global.fetch;
+
+    await testAsync("UPCitemdb.buscarPorBarcode devuelve candidatos con license=null (sin licencia conocida)", async function () {
+        global.fetch = async () => ({
+            ok: true, status: 200,
+            headers: { get: (h) => (h === "x-ratelimit-remaining" ? "50" : null) },
+            json: async () => ({ code: "OK", items: [{ title: "Chivas Regal 12", brand: "Chivas Regal", ean: "080432400388", images: ["https://cdn.walmart.com/a.jpg"] }] })
+        });
+        const candidatos = await upcitemdb.buscarPorBarcode("080432400388");
+        assert.strictEqual(candidatos.length, 1);
+        assert.strictEqual(candidatos[0].license, null);
+        assert.strictEqual(candidatos[0].fuente, "upcitemdb");
+    });
+
+    await testAsync("UPCitemdb respeta 429 marcándolo reintentable", async function () {
+        global.fetch = async () => ({
+            ok: false, status: 429,
+            headers: { get: (h) => (h === "retry-after" ? "2" : null) }
+        });
+        try {
+            await upcitemdb.buscar("chivas regal 12", {});
+            assert.fail("debería haber lanzado");
+        } catch (error) {
+            assert.ok(Object.prototype.hasOwnProperty.call(error, "retryAfterMs"));
+        }
+    });
+
+    global.fetch = fetchOriginal;
 }
 
 ejecutar();
@@ -626,6 +825,7 @@ ejecutar();
 async function ejecutar() {
     await testDescargaSSRF();
     await testConcurrencia();
+    await testUpcitemdb();
     await testResolver();
     console.log("\n" + (total - fallidos) + "/" + total + " pruebas pasaron.");
     if (fallidos > 0) { process.exitCode = 1; }

@@ -1,15 +1,15 @@
-// ProductImageResolver: orquesta la cadena de proveedores gratuitos +
-// scoring + cache para un producto. Esta es la pieza central que usa
-// api/image-search/resolve.js por cada fila.
+// ProductImageResolver: orquesta proveedores + scoring + cache para un
+// producto, en ETAPAS (§3/§9/§49) para no gastar requests de más:
 //
-// Prioridad (§4 del pedido):
-//   1) barcode/GTIN válido -> Open Food Facts (por barcode)
-//   2) marca+nombre+presentación -> Wikimedia Commons (hasta 3 variantes)
-//   3) marca+nombre+presentación -> Openverse (mismas variantes)
-//   4) (opcional, solo si hay EXA_API_KEY) Exa Search API como último recurso
-//   5) sin imagen / revisión manual
-// Se detiene apenas hay un candidato de confianza "alta" — no sigue
-// gastando llamadas a proveedores externos una vez que ya encontró algo bueno.
+//   FAST   (0-2 requests): barcode válido -> Open Food Facts + UPCitemdb lookup
+//   NORMAL (2-4 requests): Wikimedia + Openverse, hasta 3 variantes de consulta
+//   DEEP   (1-3 requests): solo si NORMAL no dio "alta" — variantes ampliadas
+//          (alias ES/EN, hint regional), descubrimiento de barcode vía
+//          UPCitemdb cuando no había uno, y Exa opcional si hay API key.
+//
+// Se detiene apenas hay un candidato de confianza "alta" — nunca seguimos
+// gastando llamadas a proveedores externos una vez que ya encontramos algo
+// bueno (§28 "search escalation" solo avanza de etapa si hace falta).
 "use strict";
 
 const cache = require("./cache");
@@ -22,29 +22,19 @@ const { conReintentos } = require("./concurrencia");
 const openfoodfacts = require("./providers/openfoodfacts");
 const wikimedia = require("./providers/wikimedia");
 const openverse = require("./providers/openverse");
+const upcitemdb = require("./providers/upcitemdb");
 const exa = require("./providers/exa");
 
 const MAX_CANDIDATOS_DEVUELTOS = 5;
-const MAX_FALLOS_CONSECUTIVOS = 5; // circuit breaker simple, §43
+const MAX_FALLOS_CONSECUTIVOS = 5; // circuit breaker simple, §43/§52
 
 function proveedorHabilitadoPorEnv(nombreEnvVar) {
     const valor = process.env[nombreEnvVar];
-    return valor === undefined || String(valor).toLowerCase() !== "false"; // default: habilitado
+    return valor === undefined || String(valor).toLowerCase() !== "false";
 }
 
-// Registro de proveedores gratuitos + orden de la cadena. `tipo: "barcode"`
-// se consulta una sola vez con el barcode; `tipo: "texto"` se consulta con
-// cada variante de consulta hasta encontrar confianza alta.
-function construirCadenaProveedores(overrides) {
-    return [
-        { nombre: "openfoodfacts", tipo: "barcode", envVar: "IMAGE_SEARCH_OPENFOODFACTS_ENABLED", modulo: (overrides && overrides.openfoodfacts) || openfoodfacts },
-        { nombre: "wikimedia", tipo: "texto", envVar: "IMAGE_SEARCH_WIKIMEDIA_ENABLED", modulo: (overrides && overrides.wikimedia) || wikimedia },
-        { nombre: "openverse", tipo: "texto", envVar: "IMAGE_SEARCH_OPENVERSE_ENABLED", modulo: (overrides && overrides.openverse) || openverse },
-        // Exa es de pago y opcional: solo entra a la cadena si hay API key
-        // configurada, y siempre al final (fallback extra, nunca reemplaza
-        // a los proveedores gratuitos).
-        { nombre: "exa", tipo: "texto", envVar: "IMAGE_SEARCH_EXA_ENABLED", modulo: (overrides && overrides.exa) || exa, requiereConfiguracion: true }
-    ];
+function modoProfundoPorDefecto() {
+    return String(process.env.IMAGE_SEARCH_MODE || "deep").toLowerCase() === "deep";
 }
 
 function circuitoAbierto(estadoCircuito, nombre) {
@@ -55,8 +45,8 @@ function registrarResultadoCircuito(estadoCircuito, nombre, exito) {
     estadoCircuito[nombre] = exito ? 0 : (estadoCircuito[nombre] || 0) + 1;
 }
 
-function log(mensaje) {
-    console.log("[IMAGE_SEARCH] " + mensaje);
+function log(producto, etapa, mensaje) {
+    console.log("[IMAGE_SEARCH] product=" + producto + " stage=" + etapa + " " + mensaje);
 }
 
 function mejorCandidato(candidatosCrudos, producto) {
@@ -64,14 +54,76 @@ function mejorCandidato(candidatosCrudos, producto) {
     return evaluarCandidatos(candidatosCrudos, producto)[0];
 }
 
+function esAlta(candidato) {
+    return !!candidato && candidato.confianza === "alta";
+}
+
+function opcionesReintento() {
+    return {
+        maxIntentos: 2,
+        esperaBaseMs: 1500,
+        esperaMaximaMs: 8000,
+        esReintentable: (error) => {
+            const esRateLimit = !!error && Object.prototype.hasOwnProperty.call(error, "retryAfterMs");
+            const esErrorServidor = !!error && /respondió 5\d\d/.test(error.message || "");
+            return esRateLimit || esErrorServidor;
+        }
+    };
+}
+
+// Deduplica por URL normalizada (§23): mismo archivo indexado por dos
+// proveedores distintos no debe aparecer dos veces en los candidatos.
+function normalizarUrlParaDedup(url) {
+    try {
+        const u = new URL(url);
+        u.search = "";
+        u.hash = "";
+        return (u.hostname + u.pathname).toLowerCase().replace(/\/$/, "");
+    } catch (error) {
+        return String(url || "").toLowerCase();
+    }
+}
+
+function deduplicarCandidatos(candidatos) {
+    const vistos = new Set();
+    const resultado = [];
+    candidatos.forEach((candidato) => {
+        const clave = normalizarUrlParaDedup(candidato.url);
+        if (vistos.has(clave)) { return; }
+        vistos.add(clave);
+        resultado.push(candidato);
+    });
+    return resultado;
+}
+
+async function intentarProveedor(producto, identificador, etapa, nombre, modulo, estadoCircuito, fn) {
+    if (!proveedorHabilitadoPorEnv("IMAGE_SEARCH_" + nombre.toUpperCase() + "_ENABLED")) { return []; }
+    if (typeof modulo.estaConfigurado === "function" && !modulo.estaConfigurado()) { return []; }
+    if (circuitoAbierto(estadoCircuito, nombre)) {
+        log(identificador, etapa, "provider=" + nombre + " skip=circuit_open");
+        return [];
+    }
+
+    try {
+        const resultado = await conReintentos(fn, opcionesReintento());
+        registrarResultadoCircuito(estadoCircuito, nombre, true);
+        log(identificador, etapa, "provider=" + nombre + " results=" + resultado.length);
+        return resultado;
+    } catch (error) {
+        registrarResultadoCircuito(estadoCircuito, nombre, false);
+        log(identificador, etapa, "provider=" + nombre + " error=" + (error.message || "desconocido"));
+        return []; // una fuente que falla nunca bloquea el import (§41/§42)
+    }
+}
+
 // producto: { nombre, marca, presentacion, codigo, barcode }
 async function resolverImagenProducto(clienteSupabase, producto, opciones) {
     const forzar = !!(opciones && opciones.forzar);
     const consultaPersonalizada = opciones && opciones.consultaPersonalizada;
+    const forzarProfundo = !!(opciones && opciones.profundo);
     const estadoCircuito = (opciones && opciones.estadoCircuito) || {};
+    const proveedores = Object.assign({ openfoodfacts, wikimedia, openverse, upcitemdb, exa }, opciones && opciones.proveedores);
     const identificador = producto.codigo || producto.nombre || "?";
-
-    const cadena = construirCadenaProveedores(opciones && opciones.proveedores);
 
     const claveCache = consultaPersonalizada ? null : construirClaveCache(producto);
     let candidatosCrudos = null;
@@ -83,55 +135,89 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
 
     if (candidatosCrudos === null) {
         candidatosCrudos = [];
-
         const barcode = consultaPersonalizada ? null : validarBarcode(producto.barcode);
-        const variantes = consultaPersonalizada ? [consultaPersonalizada] : generarVariantesConsulta(producto);
 
-        for (let i = 0; i < cadena.length; i++) {
-            const proveedor = cadena[i];
+        // ---------------- ETAPA FAST ----------------
+        if (barcode) {
+            const r1 = await intentarProveedor(producto, identificador, "fast", "openfoodfacts", proveedores.openfoodfacts, estadoCircuito,
+                () => proveedores.openfoodfacts.buscarPorBarcode(barcode));
+            candidatosCrudos.push(...r1);
 
-            const yaHayAlta = mejorCandidato(candidatosCrudos, producto);
-            if (yaHayAlta && yaHayAlta.confianza === "alta") { break; }
-
-            if (!proveedorHabilitadoPorEnv(proveedor.envVar)) { continue; }
-            if (proveedor.requiereConfiguracion && !proveedor.modulo.estaConfigurado()) { continue; }
-            if (circuitoAbierto(estadoCircuito, proveedor.nombre)) {
-                log("product=" + identificador + " provider=" + proveedor.nombre + " skip=circuit_open");
-                continue;
-            }
-
-            try {
-                if (proveedor.tipo === "barcode") {
-                    if (!barcode) { continue; }
-                    log("product=" + identificador + " provider=" + proveedor.nombre + " barcode=" + barcode);
-                    const resultado = await conReintentos(() => proveedor.modulo.buscarPorBarcode(barcode), opcionesReintento());
-                    candidatosCrudos.push(...resultado);
-                    registrarResultadoCircuito(estadoCircuito, proveedor.nombre, true);
-                    log("product=" + identificador + " provider=" + proveedor.nombre + " result=" + (resultado.length ? "found" : "not_found"));
-                } else {
-                    for (let v = 0; v < variantes.length; v++) {
-                        const yaAlta = mejorCandidato(candidatosCrudos, producto);
-                        if (yaAlta && yaAlta.confianza === "alta") { break; }
-
-                        const query = proveedor.nombre === "exa" ? construirConsulta(producto) : variantes[v];
-                        const resultado = await conReintentos(() => proveedor.modulo.buscar(query, { limite: 6 }), opcionesReintento());
-                        candidatosCrudos.push(...resultado);
-                        log("product=" + identificador + " provider=" + proveedor.nombre + " candidates=" + resultado.length);
-
-                        if (proveedor.nombre === "exa") { break; } // Exa arma su propia consulta compuesta, no itera variantes
-                    }
-                    registrarResultadoCircuito(estadoCircuito, proveedor.nombre, true);
-                }
-            } catch (error) {
-                registrarResultadoCircuito(estadoCircuito, proveedor.nombre, false);
-                log("product=" + identificador + " provider=" + proveedor.nombre + " error=" + (error.message || "desconocido"));
-                // Una fuente externa que falla nunca bloquea el import (§41/§42):
-                // se sigue con el siguiente proveedor de la cadena.
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto))) {
+                const r2 = await intentarProveedor(producto, identificador, "fast", "upcitemdb", proveedores.upcitemdb, estadoCircuito,
+                    () => proveedores.upcitemdb.buscarPorBarcode(barcode));
+                candidatosCrudos.push(...r2);
             }
         }
 
+        // ---------------- ETAPA NORMAL ----------------
+        if (!esAlta(mejorCandidato(candidatosCrudos, producto))) {
+            const variantes = consultaPersonalizada ? [consultaPersonalizada] : generarVariantesConsulta(producto, { profundo: false });
+
+            for (let v = 0; v < variantes.length && !esAlta(mejorCandidato(candidatosCrudos, producto)); v++) {
+                const rw = await intentarProveedor(producto, identificador, "normal", "wikimedia", proveedores.wikimedia, estadoCircuito,
+                    () => proveedores.wikimedia.buscar(variantes[v], { limite: 6 }));
+                candidatosCrudos.push(...rw);
+            }
+            for (let v = 0; v < variantes.length && !esAlta(mejorCandidato(candidatosCrudos, producto)); v++) {
+                const ro = await intentarProveedor(producto, identificador, "normal", "openverse", proveedores.openverse, estadoCircuito,
+                    () => proveedores.openverse.buscar(variantes[v], { limite: 6 }));
+                candidatosCrudos.push(...ro);
+            }
+        }
+
+        // ---------------- ETAPA DEEP ----------------
+        // Se activa si NORMAL no alcanzó "alta" Y el modo lo permite (o el
+        // llamador pidió explícitamente "buscar más profundamente" en una
+        // fila puntual, aunque el modo global sea "normal").
+        const puedeProfundizar = !consultaPersonalizada && (forzarProfundo || modoProfundoPorDefecto());
+        if (puedeProfundizar && !esAlta(mejorCandidato(candidatosCrudos, producto))) {
+            // Descubrimiento de barcode cuando no había uno (§46): solo se
+            // usa para buscar más imágenes en esta resolución, nunca se
+            // guarda en el producto sin confirmación explícita.
+            if (!barcode) {
+                const queryDescubrimiento = construirConsulta(producto);
+                try {
+                    const barcodeDescubierto = proveedorHabilitadoPorEnv("IMAGE_SEARCH_UPCITEMDB_ENABLED") && !circuitoAbierto(estadoCircuito, "upcitemdb")
+                        ? await conReintentos(() => proveedores.upcitemdb.descubrirBarcode(queryDescubrimiento, producto), opcionesReintento())
+                        : null;
+                    if (barcodeDescubierto) {
+                        log(identificador, "deep", "upcitemdb descubrió posible barcode=" + barcodeDescubierto + " (sin guardar, solo para buscar imagen)");
+                        const rOff = await intentarProveedor(producto, identificador, "deep", "openfoodfacts", proveedores.openfoodfacts, estadoCircuito,
+                            () => proveedores.openfoodfacts.buscarPorBarcode(barcodeDescubierto));
+                        candidatosCrudos.push(...rOff);
+                    }
+                } catch (error) {
+                    log(identificador, "deep", "upcitemdb descubrimiento error=" + error.message);
+                }
+            }
+
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto))) {
+                const rU = await intentarProveedor(producto, identificador, "deep", "upcitemdb", proveedores.upcitemdb, estadoCircuito,
+                    () => proveedores.upcitemdb.buscar(construirConsulta(producto), { limite: 10 }));
+                candidatosCrudos.push(...rU);
+            }
+
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto))) {
+                const variantesProfundas = generarVariantesConsulta(producto, { profundo: true });
+                for (let v = 0; v < variantesProfundas.length && !esAlta(mejorCandidato(candidatosCrudos, producto)); v++) {
+                    const rw = await intentarProveedor(producto, identificador, "deep", "wikimedia", proveedores.wikimedia, estadoCircuito,
+                        () => proveedores.wikimedia.buscar(variantesProfundas[v], { limite: 6 }));
+                    candidatosCrudos.push(...rw);
+                }
+            }
+
+            if (!esAlta(mejorCandidato(candidatosCrudos, producto)) && proveedores.exa.estaConfigurado()) {
+                const rE = await intentarProveedor(producto, identificador, "deep", "exa", proveedores.exa, estadoCircuito,
+                    () => proveedores.exa.buscar(construirConsulta(producto), { limite: 6 }));
+                candidatosCrudos.push(...rE);
+            }
+        }
+
+        candidatosCrudos = deduplicarCandidatos(candidatosCrudos);
+
         if (claveCache) {
-            await cache.guardarEnCache(clienteSupabase, claveCache, "chain", variantes[0] || "", candidatosCrudos);
+            await cache.guardarEnCache(clienteSupabase, claveCache, "chain-v2", construirConsulta(producto), candidatosCrudos);
         }
     }
 
@@ -139,9 +225,10 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
     const ganador = evaluados.length > 0 ? evaluados[0] : null;
 
     if (ganador) {
-        log("product=" + identificador + " selected score=" + ganador.score + " fuente=" + ganador.fuente + " confianza=" + ganador.confianza);
+        log(identificador, "final", "selected score=" + ganador.score + " identity=" + ganador.identityScore +
+            " quality=" + ganador.qualityScore + " fuente=" + ganador.fuente + " confianza=" + ganador.confianza);
     } else {
-        log("product=" + identificador + " selected=none");
+        log(identificador, "final", "selected=none");
     }
 
     const searchQueryMostrado = consultaPersonalizada || construirConsulta(producto);
@@ -161,17 +248,4 @@ async function resolverImagenProducto(clienteSupabase, producto, opciones) {
     };
 }
 
-function opcionesReintento() {
-    return {
-        maxIntentos: 2,
-        esperaBaseMs: 1500,
-        esperaMaximaMs: 8000,
-        esReintentable: (error) => {
-            const esRateLimit = !!error && Object.prototype.hasOwnProperty.call(error, "retryAfterMs");
-            const esErrorServidor = !!error && /respondió 5\d\d/.test(error.message || "");
-            return esRateLimit || esErrorServidor;
-        }
-    };
-}
-
-module.exports = { resolverImagenProducto, construirCadenaProveedores };
+module.exports = { resolverImagenProducto, deduplicarCandidatos };

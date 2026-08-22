@@ -55,7 +55,7 @@
     var configuracionBusqueda = { enabled: false, providers: [], paidProviderActive: false, maxPerImport: 300, concurrency: 3 };
     var NOMBRE_LEGIBLE_FUENTE = {
         openfoodfacts: "Open Food Facts", wikimedia: "Wikimedia Commons",
-        openverse: "Openverse", exa: "Exa", zip: "ZIP", url: "URL"
+        openverse: "Openverse", upcitemdb: "UPCitemdb", exa: "Exa", zip: "ZIP", url: "URL"
     };
     var buscandoImagenes = false;
     var indiceDialogoActual = null;
@@ -95,10 +95,12 @@
             var nombresFuentes = (configuracionBusqueda.providers || []).map(function (p) {
                 return NOMBRE_LEGIBLE_FUENTE[p] || p;
             });
-            if (configuracionBusqueda.paidProviderActive) { nombresFuentes.push("Exa"); }
-            estado.textContent = "✓ Búsqueda automática disponible (fuentes gratuitas: " +
-                (nombresFuentes.length ? nombresFuentes.join(", ") : "ninguna") + ") · hasta " +
-                configuracionBusqueda.maxPerImport + " búsquedas por importación.";
+            var lineaProfunda = configuracionBusqueda.deepSearchExpandedAvailable
+                ? "✓ Búsqueda web profunda disponible (Exa)."
+                : "Búsqueda profunda ampliada no configurada (opcional).";
+            estado.textContent = "✓ Fuentes abiertas disponibles: " +
+                (nombresFuentes.length ? nombresFuentes.join(", ") : "ninguna") + " · hasta " +
+                configuracionBusqueda.maxPerImport + " búsquedas por importación. " + lineaProfunda;
         } else {
             checkbox.checked = false;
             checkbox.disabled = true;
@@ -587,21 +589,31 @@
     // Búsqueda automática de imágenes (backend)
     // ---------------------------------------------------------------------
 
-    async function buscarImagenesFaltantes() {
+    // `opciones.profundo`: fuerza la etapa DEEP (§34/§35 "buscar profundamente
+    // las N faltantes"). `opciones.soloSinResultado`: cuando es true, además
+    // de filtrar por `filaElegibleParaBusqueda` (que ya excluye lo resuelto),
+    // se limita a las filas que YA se buscaron una vez y no dieron resultado
+    // — para no volver a tocar filas recién agregadas que ni se intentaron.
+    async function buscarImagenesFaltantes(opciones) {
         if (buscandoImagenes) { return; }
+        var profundo = !!(opciones && opciones.profundo);
+        var soloSinResultado = !!(opciones && opciones.soloSinResultado);
 
         var faltantes = filasValidadas
             .map(function (fila, indice) { return { fila: fila, indice: indice }; })
-            .filter(function (par) { return filaElegibleParaBusqueda(par.fila); });
+            .filter(function (par) { return filaElegibleParaBusqueda(par.fila); })
+            .filter(function (par) { return !soloSinResultado || par.fila._yaBuscado; });
 
         if (faltantes.length === 0) { return; }
 
         buscandoImagenes = true;
         var botonGlobal = document.getElementById("btnBuscarFaltantes");
+        var botonProfundo = document.getElementById("btnBuscarProfundoFaltantes");
         var estadoTexto = document.getElementById("estadoBuscandoImagenes");
         botonGlobal.disabled = true;
+        botonProfundo.disabled = true;
         estadoTexto.hidden = false;
-        estadoTexto.textContent = "Buscando imágenes… 0 / " + faltantes.length;
+        estadoTexto.textContent = (profundo ? "Buscando más profundamente… 0 / " : "Buscando imágenes… 0 / ") + faltantes.length;
 
         var procesadosTotal = 0;
         var token = await obtenerAccessToken();
@@ -610,12 +622,14 @@
             estadoTexto.textContent = "Sesión inválida: no se pudo buscar imágenes.";
             buscandoImagenes = false;
             botonGlobal.disabled = false;
+            botonProfundo.disabled = false;
             return;
         }
 
         for (var i = 0; i < faltantes.length; i += ITEMS_POR_LLAMADA_BUSQUEDA) {
             var lote = faltantes.slice(i, i + ITEMS_POR_LLAMADA_BUSQUEDA);
             var items = lote.map(function (par) {
+                par.fila._yaBuscado = true;
                 return {
                     indice: par.indice,
                     nombre: par.fila.nombre,
@@ -627,12 +641,12 @@
             });
 
             try {
-                await llamarResolveSSE(token, { items: items }, function (evento) {
+                await llamarResolveSSE(token, { items: items, profundo: profundo, forzar: profundo }, function (evento) {
                     if (evento.tipo === "item") {
                         aplicarResultadoBusqueda(evento.datos);
                     } else if (evento.tipo === "progreso") {
                         procesadosTotal = i + evento.datos.procesados;
-                        estadoTexto.textContent = "Buscando imágenes… " + procesadosTotal + " / " + faltantes.length;
+                        estadoTexto.textContent = (profundo ? "Buscando más profundamente… " : "Buscando imágenes… ") + procesadosTotal + " / " + faltantes.length;
                     }
                 });
             } catch (error) {
@@ -642,8 +656,13 @@
             }
         }
 
+        var conImagen = faltantes.filter(function (par) { return par.fila.resolucionImagen.tipo === "busqueda"; }).length;
+        estadoTexto.textContent = "Búsqueda completada: " + faltantes.length + " producto" + (faltantes.length === 1 ? "" : "s") +
+            " analizado" + (faltantes.length === 1 ? "" : "s") + ", " + conImagen + " con imagen encontrada.";
+
         buscandoImagenes = false;
         botonGlobal.disabled = false;
+        botonProfundo.disabled = false;
         estadoTexto.hidden = false;
         renderizarResumenYPreview();
     }
@@ -1013,6 +1032,20 @@
         document.getElementById("textoBtnBuscarFaltantes").textContent =
             "Buscar " + faltantes.length + " imagen" + (faltantes.length === 1 ? "" : "es") + " automáticamente";
         document.getElementById("btnBuscarFaltantes").disabled = buscandoImagenes;
+
+        // §35: "Buscar profundamente las N faltantes" solo aparece para las
+        // que YA se intentaron una vez y no dieron resultado — no tiene
+        // sentido antes de un primer intento normal.
+        var yaIntentadasSinResultado = faltantes.filter(function (fila) { return fila._yaBuscado; });
+        var botonProfundo = document.getElementById("btnBuscarProfundoFaltantes");
+        if (yaIntentadasSinResultado.length > 0) {
+            botonProfundo.hidden = false;
+            botonProfundo.disabled = buscandoImagenes;
+            document.getElementById("textoBtnBuscarProfundoFaltantes").textContent =
+                "Buscar profundamente las " + yaIntentadasSinResultado.length + " faltantes";
+        } else {
+            botonProfundo.hidden = true;
+        }
     }
 
     function crearFilaPreview(fila, indice, estado) {
@@ -1633,7 +1666,10 @@
 
     function configurarBotones() {
         document.getElementById("btnValidarArchivo").addEventListener("click", validarArchivos);
-        document.getElementById("btnBuscarFaltantes").addEventListener("click", buscarImagenesFaltantes);
+        document.getElementById("btnBuscarFaltantes").addEventListener("click", function () { buscarImagenesFaltantes(); });
+        document.getElementById("btnBuscarProfundoFaltantes").addEventListener("click", function () {
+            buscarImagenesFaltantes({ profundo: true, soloSinResultado: true });
+        });
         document.getElementById("btnImportar").addEventListener("click", ejecutarImportacion);
         document.getElementById("btnCancelarImportacion").addEventListener("click", function () {
             ocultarSeccionesResultado();

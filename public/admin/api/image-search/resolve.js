@@ -6,6 +6,7 @@
 // Body: {
 //   items: [{ indice, nombre, marca, presentacion, codigo, barcode }],
 //   forzar: boolean,            // ignora cache (usado por "Buscar de nuevo")
+//   profundo: boolean,          // fuerza la etapa DEEP (§34/§35 "buscar más profundamente")
 //   consultaPersonalizada: string | null  // solo tiene sentido con un solo item
 // }
 "use strict";
@@ -88,6 +89,7 @@ module.exports = async function handler(req, res) {
     await procesarConConcurrencia(itemsAProcesar, limitarConcurrencia(), async (item) => {
         const resultado = await resolverImagenProducto(sesion.cliente, item, {
             forzar: !!body.forzar,
+            profundo: !!body.profundo,
             consultaPersonalizada: items.length === 1 ? body.consultaPersonalizada : null,
             estadoCircuito: estadoCircuito
         });
